@@ -9,7 +9,7 @@ function AdminCustomersPage() {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const { data } = await api.get("/users", getAuthConfig());
+        const { data } = await api.get("/api/users", getAuthConfig());
 
         const onlyCustomers = data.filter((user) => user.role !== "admin");
         setCustomers(onlyCustomers);

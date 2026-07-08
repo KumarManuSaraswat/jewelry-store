@@ -8,7 +8,7 @@ function MyOrdersPage() {
   useEffect(() => {
     const fetchMyOrders = async () => {
       try {
-        const { data } = await api.get("/orders/my-orders", getAuthConfig());
+        const { data } = await api.get("/api/orders/my-orders", getAuthConfig());
         setOrders(data);
       } catch (error) {
         console.error(error);

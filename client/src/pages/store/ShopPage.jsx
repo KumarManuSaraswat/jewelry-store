@@ -21,8 +21,8 @@ function ShopPage() {
     const fetchProducts = async () => {
       try {
         const url = selectedCategory
-          ? `/products?category=${selectedCategory}`
-          : "/products";
+          ? `/api/products?category=${selectedCategory}`
+          : "/api/products";
 
         const { data } = await api.get(url);
         setProducts(data);

@@ -132,14 +132,14 @@ function HomePage() {
   const [newArrivals, setNewArrivals] = useState([]);
   const [bestSellers, setBestSellers] = useState([]);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
-
+  console.log("PRODUCTS URL:", `${import.meta.env.VITE_API_URL}/api/products?isFeatured=true&limit=4`);
   useEffect(() => {
     const fetchHomeData = async () => {
       try {
         const [featuredRes, newRes, bestRes] = await Promise.all([
-          api.get("/products?isFeatured=true&limit=4"),
-          api.get("/products?isNewArrival=true&limit=4"),
-          api.get("/products?isBestSeller=true&limit=4"),
+          api.get("/api/products?isFeatured=true&limit=4"),
+          api.get("/api/products?isNewArrival=true&limit=4"),
+          api.get("/api/products?isBestSeller=true&limit=4"),
         ]);
 
         setFeaturedProducts(featuredRes.data);

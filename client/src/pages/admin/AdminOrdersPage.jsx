@@ -7,7 +7,7 @@ function AdminOrdersPage() {
 
   const fetchOrders = async () => {
     try {
-      const { data } = await api.get("/orders", getAuthConfig());
+      const { data } = await api.get("/api/orders", getAuthConfig());
       setOrders(data);
     } catch (error) {
       console.error(error);

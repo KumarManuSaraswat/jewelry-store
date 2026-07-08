@@ -27,7 +27,7 @@ function AdminLoginPage() {
     e.preventDefault();
 
     try {
-      const { data } = await api.post("/auth/login", formData);
+      const { data } = await api.post("/api/auth/login", formData);
 
       if (data.role !== "admin") {
         alert("Access denied. Admin only.");
@@ -39,9 +39,12 @@ function AdminLoginPage() {
     } catch (error) {
       alert(error.response?.data?.message || "Login failed");
     }
+
+    console.log("LOGIN URL:", `${import.meta.env.VITE_API_URL}/api/auth/login`);
   };
 
   return (
+    
     <div style={{ maxWidth: "420px", margin: "80px auto", padding: "24px" }}>
       <h1 style={{ marginBottom: "20px" }}>Admin Login</h1>
 

@@ -24,7 +24,7 @@ function AdminProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const { data } = await api.get("/products");
+      const { data } = await api.get("/api/products");
       setProducts(data);
     } catch (error) {
       console.error(error);
@@ -78,7 +78,7 @@ function AdminProductsPage() {
     try {
       setUploading(true);
 
-      const { data } = await api.post("/upload", uploadData, {
+      const { data } = await api.post("/api/upload", uploadData, {
         ...getAuthConfig(),
         headers: {
           ...getAuthConfig().headers,
@@ -110,10 +110,10 @@ function AdminProductsPage() {
 
     try {
       if (editingId) {
-        await api.put(`/products/${editingId}`, buildPayload(), getAuthConfig());
+        await api.put(`/api/products/${editingId}`, buildPayload(), getAuthConfig());
         alert("Product updated successfully");
       } else {
-        await api.post("/products", buildPayload(), getAuthConfig());
+        await api.post("/api/products", buildPayload(), getAuthConfig());
         alert("Product created successfully");
       }
 
@@ -129,7 +129,7 @@ function AdminProductsPage() {
     if (!confirmDelete) return;
 
     try {
-      await api.delete(`/products/${id}`, getAuthConfig());
+      await api.delete(`api/products/${id}`, getAuthConfig());
       alert("Product deleted successfully");
 
       if (editingId === id) {
