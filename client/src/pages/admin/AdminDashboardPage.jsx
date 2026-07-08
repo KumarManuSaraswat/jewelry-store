@@ -9,8 +9,8 @@ function AdminDashboardPage() {
   const fetchDashboardData = async () => {
     try {
       const [statsRes, usersRes] = await Promise.all([
-        api.get("/admin/stats", getAuthConfig()),
-        api.get("/admin/users", getAuthConfig()),
+        api.get("/api/admin/stats", getAuthConfig()),
+        api.get("/api/admin/users", getAuthConfig()),
       ]);
 
       setStats(statsRes.data);
@@ -28,7 +28,7 @@ function AdminDashboardPage() {
   const handleRoleChange = async (userId, role) => {
     try {
       await api.put(
-        `/admin/users/${userId}/role`,
+        `/api/admin/users/${userId}/role`,
         { role },
         getAuthConfig()
       );
