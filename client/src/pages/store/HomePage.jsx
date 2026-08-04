@@ -132,7 +132,7 @@ function HomePage() {
   const [newArrivals, setNewArrivals] = useState([]);
   const [bestSellers, setBestSellers] = useState([]);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
-  console.log("PRODUCTS URL:", `${import.meta.env.VITE_API_URL}/api/products?isFeatured=true&limit=4`);
+
   useEffect(() => {
     const fetchHomeData = async () => {
       try {
@@ -192,12 +192,15 @@ function HomePage() {
 
           <div className="hero-card">
             <img
+              className="hero-image-desktop"
               src={
                 heroProduct?.images?.[0] ||
                 "https://via.placeholder.com/700x900/f3e9dd/2d241b?text=ORNIVA+COLLECTION"
               }
               alt={heroProduct?.title || "Featured jewelry"}
             />
+
+            <div className="hero-mobile-bg" />
 
             <div className="hero-card-content">
               <p className="eyebrow">Featured</p>
@@ -258,7 +261,7 @@ function HomePage() {
           {renderGrid(newArrivals)}
         </section>
 
-        <section className="promise-section">
+        <section className="promise-section" id="promise">
           <div className="promise-card">
             <img
               src={
@@ -283,9 +286,9 @@ function HomePage() {
                 <span className="promise-pill">30-Day Returns</span>
               </div>
 
-              <button type="button" className="btn-primary">
+              <Link to="/about" className="btn-primary">
                 Our Story
-              </button>
+              </Link>
             </div>
           </div>
         </section>

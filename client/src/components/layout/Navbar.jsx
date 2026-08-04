@@ -1,12 +1,24 @@
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useCart } from "../../context/CartContext";
+import { getUserInfo, logoutUser, isAdminLoggedIn } from "../../utils/auth";
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { totals } = useCart();
+  const navigate = useNavigate();
+
+  const user = getUserInfo();
+  const isLoggedIn = !!user?.token;
+  const adminLoggedIn = isAdminLoggedIn();
 
   const closeMenu = () => setMenuOpen(false);
+
+  const handleLogout = () => {
+    logoutUser();
+    closeMenu();
+    navigate("/");
+  };
 
   return (
     <>
@@ -36,9 +48,26 @@ function Navbar() {
           </div>
 
           <div className="desktop-actions">
-            <Link to="/my-orders" className="nav-action" onClick={closeMenu}>
-              My Orders
-            </Link>
+            {isLoggedIn ? (
+              <>
+                <Link to="/my-orders" className="nav-action" onClick={closeMenu}>
+                  My Orders
+                </Link>
+                <button type="button" className="nav-action" onClick={handleLogout}>
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="nav-action" onClick={closeMenu}>
+                  Login
+                </Link>
+                <Link to="/register" className="nav-action" onClick={closeMenu}>
+                  Sign Up
+                </Link>
+              </>
+            )}
+
             <Link
               to="/cart"
               className="nav-action nav-action-dark"
@@ -46,9 +75,12 @@ function Navbar() {
             >
               Bag ({totals.totalItems})
             </Link>
-            <Link to="/admin" className="nav-action" onClick={closeMenu}>
-              Admin
-            </Link>
+
+            {adminLoggedIn ? (
+              <Link to="/admin" className="nav-action" onClick={closeMenu}>
+                Admin
+              </Link>
+            ) : null}
           </div>
 
           <button
@@ -74,15 +106,41 @@ function Navbar() {
             <NavLink to="/contact" className="mobile-link" onClick={closeMenu}>
               Contact
             </NavLink>
-            <NavLink to="/my-orders" className="mobile-link" onClick={closeMenu}>
-              My Orders
-            </NavLink>
+
+            {isLoggedIn ? (
+              <>
+                <NavLink to="/my-orders" className="mobile-link" onClick={closeMenu}>
+                  My Orders
+                </NavLink>
+                <button
+                  type="button"
+                  className="mobile-link"
+                  onClick={handleLogout}
+                  style={{ textAlign: "left" }}
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <NavLink to="/login" className="mobile-link" onClick={closeMenu}>
+                  Login
+                </NavLink>
+                <NavLink to="/register" className="mobile-link" onClick={closeMenu}>
+                  Sign Up
+                </NavLink>
+              </>
+            )}
+
             <NavLink to="/cart" className="mobile-link" onClick={closeMenu}>
               Bag ({totals.totalItems})
             </NavLink>
-            <NavLink to="/admin" className="mobile-link" onClick={closeMenu}>
-              Admin
-            </NavLink>
+
+            {adminLoggedIn ? (
+              <NavLink to="/admin" className="mobile-link" onClick={closeMenu}>
+                Admin
+              </NavLink>
+            ) : null}
           </div>
         </div>
       </header>

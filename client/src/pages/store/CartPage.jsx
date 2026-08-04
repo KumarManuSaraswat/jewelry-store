@@ -5,6 +5,8 @@ function CartPage() {
   const navigate = useNavigate();
   const { cartItems, updateCartQuantity, removeFromCart, totals } = useCart();
 
+  const totalUnits = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
   return (
     <div className="page-shell">
       <div className="container">
@@ -49,7 +51,14 @@ function CartPage() {
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
                     <button
                       className="small-action-btn"
                       type="button"
@@ -90,6 +99,10 @@ function CartPage() {
             <div className="shop-sidebar">
               <h3 className="filter-title">Order Summary</h3>
 
+              <div style={{ marginBottom: "14px", color: "#666" }}>
+                {totalUnits} item{totalUnits > 1 ? "s" : ""} in your bag
+              </div>
+
               <div className="filter-list">
                 <div className="filter-chip">Items: ₹{totals.itemsPrice}</div>
                 <div className="filter-chip">Shipping: ₹{totals.shippingPrice}</div>
@@ -105,6 +118,19 @@ function CartPage() {
               >
                 Proceed to Checkout
               </button>
+
+              <Link
+                to="/shop"
+                className="btn-secondary"
+                style={{
+                  marginTop: "12px",
+                  width: "100%",
+                  justifyContent: "center",
+                  display: "inline-flex",
+                }}
+              >
+                Continue Shopping
+              </Link>
             </div>
           </div>
         )}

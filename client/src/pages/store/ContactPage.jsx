@@ -1,4 +1,14 @@
+import { Link } from "react-router-dom";
+
+const WHATSAPP_NUMBER = "917231932107";
+
 function ContactPage() {
+  const openWhatsApp = () => {
+    const message = `Hello ORNIVA, I need help with an order or product inquiry.`;
+    const url = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="page-shell">
       <div className="container">
@@ -17,17 +27,32 @@ function ContactPage() {
           <div className="contact-grid">
             <div className="contact-card">
               <h3>Email</h3>
-              <p>hello@orniva.com</p>
+              <p>
+                <a href="mailto:Orniva.online@gmail.com">Orniva.online@gmail.com</a>
+              </p>
             </div>
 
             <div className="contact-card">
               <h3>Phone / WhatsApp</h3>
-              <p>+91 98765 43210</p>
+              <p>
+                <a href="tel:+917231932107">+91 72319 32107</a>
+              </p>
+              <button type="button" className="btn-secondary" onClick={openWhatsApp}>
+                Chat on WhatsApp
+              </button>
             </div>
 
             <div className="contact-card">
-              <h3>Location</h3>
-              <p>Jaipur, Rajasthan, India</p>
+              <h3>Instagram</h3>
+              <p>
+                <a
+                  href="https://instagram.com/_orniva"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  @_orniva
+                </a>
+              </p>
             </div>
           </div>
         </section>

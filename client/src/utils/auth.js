@@ -8,7 +8,12 @@ export const isAdminLoggedIn = () => {
   return !!user && user.role === "admin" && !!user.token;
 };
 
-export const logoutAdmin = () => {
+export const isCustomerLoggedIn = () => {
+  const user = getUserInfo();
+  return !!user && user.role === "customer" && !!user.token;
+};
+
+export const logoutUser = () => {
   localStorage.removeItem("userInfo");
 };
 

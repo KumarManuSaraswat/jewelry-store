@@ -5,6 +5,11 @@ import { getAuthConfig } from "../../utils/auth";
 function AdminDashboardPage() {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
+  const [adminForm, setAdminForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
 
   const fetchDashboardData = async () => {
     try {
@@ -35,6 +40,19 @@ function AdminDashboardPage() {
       fetchDashboardData();
     } catch (error) {
       alert(error.response?.data?.message || "Role update failed");
+    }
+  };
+
+  const handleCreateAdmin = async (e) => {
+    e.preventDefault();
+
+    try {
+      await api.post("/api/auth/admin/create", adminForm, getAuthConfig());
+      alert("Admin created successfully");
+      setAdminForm({ name: "", email: "", password: "" });
+      fetchDashboardData();
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to create admin");
     }
   };
 
@@ -70,6 +88,50 @@ function AdminDashboardPage() {
           <span>Total Admins</span>
           <strong>{stats?.totalAdmins || 0}</strong>
         </div>
+      </div>
+
+      <div className="admin-section-card">
+        <h2 style={{ marginTop: 0 }}>Create Admin</h2>
+        <form
+          onSubmit={handleCreateAdmin}
+          style={{ display: "grid", gap: "12px" }}
+        >
+          <input
+            name="name"
+            placeholder="Full Name"
+            value={adminForm.name}
+            onChange={(e) =>
+              setAdminForm({ ...adminForm, name: e.target.value })
+            }
+            required
+          />
+
+          <input
+            name="email"
+            type="email"
+            placeholder="Admin Email"
+            value={adminForm.email}
+            onChange={(e) =>
+              setAdminForm({ ...adminForm, email: e.target.value })
+            }
+            required
+          />
+
+          <input
+            name="password"
+            type="password"
+            placeholder="Temporary Password"
+            value={adminForm.password}
+            onChange={(e) =>
+              setAdminForm({ ...adminForm, password: e.target.value })
+            }
+            required
+          />
+
+          <button className="btn-primary" type="submit">
+            Create Admin
+          </button>
+        </form>
       </div>
 
       <div className="admin-section-card">

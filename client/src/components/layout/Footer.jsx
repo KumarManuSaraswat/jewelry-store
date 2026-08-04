@@ -16,28 +16,28 @@ function Footer() {
               <a
                 href="https://instagram.com"
                 target="_blank"
-                rel="noreferrer"
+                rel="noreferrer noopener"
               >
                 Instagram
               </a>
               <a
                 href="https://pinterest.com"
                 target="_blank"
-                rel="noreferrer"
+                rel="noreferrer noopener"
               >
                 Pinterest
               </a>
               <a
                 href="https://facebook.com"
                 target="_blank"
-                rel="noreferrer"
+                rel="noreferrer noopener"
               >
                 Facebook
               </a>
               <a
                 href="https://wa.me/"
                 target="_blank"
-                rel="noreferrer"
+                rel="noreferrer noopener"
               >
                 WhatsApp
               </a>
@@ -80,12 +80,9 @@ function Footer() {
           <p>© 2026 ORNIVA. All rights reserved.</p>
 
           <div className="payment-row">
-            <span className="payment-pill">VISA</span>
-            <span className="payment-pill">MASTERCARD</span>
-            <span className="payment-pill">AMEX</span>
-            <span className="payment-pill">PAYPAL</span>
-            <span className="payment-pill">APPLE PAY</span>
-            <span className="payment-pill">GPAY</span>
+            <span className="payment-pill">CASH ON DELIVERY</span>
+            <span className="payment-pill">WHATSAPP ORDER</span>
+            <span className="payment-pill">UPI</span>
           </div>
         </div>
       </div>

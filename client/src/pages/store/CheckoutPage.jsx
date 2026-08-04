@@ -4,6 +4,8 @@ import api from "../../api/axios";
 import { useCart } from "../../context/CartContext";
 import { getAuthConfig } from "../../utils/auth";
 
+const WHATSAPP_NUMBER = "917231932107";
+
 function CheckoutPage() {
   const navigate = useNavigate();
   const { cartItems, totals, clearCart } = useCart();
@@ -27,6 +29,40 @@ function CheckoutPage() {
       ...prev,
       [e.target.name]: e.target.value,
     }));
+  };
+
+  const buildOrderMessage = (orderId) => {
+    const itemsText = cartItems
+      .map((item) => `• ${item.title} x ${item.quantity} = ₹${item.price * item.quantity}`)
+      .join("\n");
+
+    return `Hello ORNIVA, I want to place an order.
+
+Order ID: ${orderId}
+Name: ${formData.fullName}
+Phone: ${formData.phone}
+Address: ${formData.addressLine1}${formData.addressLine2 ? ", " + formData.addressLine2 : ""}
+City: ${formData.city}
+State: ${formData.state}
+Postal Code: ${formData.postalCode}
+Country: ${formData.country}
+
+Items:
+${itemsText}
+
+Items Total: ₹${totals.itemsPrice}
+Shipping: ₹${totals.shippingPrice}
+Tax: ₹${totals.taxPrice}
+Grand Total: ₹${totals.totalPrice}
+
+Payment Method: ${formData.paymentMethod === "cod" ? "Cash on Delivery" : "WhatsApp Manual Confirmation"}
+
+Please confirm the order.`;
+  };
+
+  const openWhatsApp = (message) => {
+    const url = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const handlePlaceOrder = async (e) => {
@@ -58,10 +94,17 @@ function CheckoutPage() {
         paymentMethod: formData.paymentMethod,
       };
 
-      const { data } = await api.post("/orders", payload, getAuthConfig());
+      const { data: createdOrder } = await api.post(
+        "/api/orders",
+        payload,
+        getAuthConfig()
+      );
+
+      const message = buildOrderMessage(createdOrder._id);
 
       clearCart();
-      navigate(`/orders/${data._id}`);
+      navigate(`/orders/${createdOrder._id}`);
+      openWhatsApp(message);
     } catch (error) {
       console.error(error);
       alert(error.response?.data?.message || "Failed to place order");
@@ -119,22 +162,11 @@ function CheckoutPage() {
                 <input
                   type="radio"
                   name="paymentMethod"
-                  value="upi"
-                  checked={formData.paymentMethod === "upi"}
+                  value="whatsapp"
+                  checked={formData.paymentMethod === "whatsapp"}
                   onChange={handleChange}
                 />{" "}
-                UPI
-              </label>
-
-              <label className="filter-chip">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="razorpay"
-                  checked={formData.paymentMethod === "razorpay"}
-                  onChange={handleChange}
-                />{" "}
-                Razorpay
+                WhatsApp Manual Confirmation
               </label>
             </div>
           </div>
@@ -166,7 +198,7 @@ function CheckoutPage() {
               style={{ marginTop: "18px", width: "100%", justifyContent: "center" }}
               disabled={loading}
             >
-              {loading ? "Placing Order..." : "Place Order"}
+              {loading ? "Processing..." : "Place Order on WhatsApp"}
             </button>
           </div>
         </form>

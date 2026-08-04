@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 
@@ -13,17 +13,22 @@ import AboutPage from "../pages/store/AboutPage";
 import ContactPage from "../pages/store/ContactPage";
 import NotFoundPage from "../pages/store/NotFoundPage";
 
-import LoginPage from "../pages/auth/LoginPage";
+import LoginPage from "../pages/store/LoginPage";
+import RegisterPage from "../pages/store/RegisterPage";
+import ForgotPasswordPage from "../pages/store/ForgotPasswordPage";
+import ResetPasswordPage from "../pages/store/ResetPasswordPage";
 
 import AdminLoginPage from "../pages/admin/AdminLoginPage";
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
 import AdminProductsPage from "../pages/admin/AdminProductsPage";
 import AdminOrdersPage from "../pages/admin/AdminOrdersPage";
+import AdminOrderDetailsPage from "../pages/admin/AdminOrderDetailsPage";
 import AdminUsersPage from "../pages/admin/AdminUsersPage";
 import AdminCustomersPage from "../pages/admin/AdminCustomersPage";
 
 import ProtectedAdminRoute from "./ProtectedAdminRoute";
 import AdminLayout from "../components/admin/AdminLayout";
+import { getUserInfo } from "../utils/auth";
 
 function StoreLayout({ children }) {
   return (
@@ -33,6 +38,16 @@ function StoreLayout({ children }) {
       <Footer />
     </>
   );
+}
+
+function ProtectedCustomerRoute() {
+  const user = getUserInfo();
+  return user?.token ? <Outlet /> : <Navigate to="/login" replace />;
+}
+
+function GuestOnlyRoute() {
+  const user = getUserInfo();
+  return user?.token ? <Navigate to="/" replace /> : <Outlet />;
 }
 
 function AppRoutes() {
@@ -74,32 +89,34 @@ function AppRoutes() {
         }
       />
 
-      <Route
-        path="/checkout"
-        element={
-          <StoreLayout>
-            <CheckoutPage />
-          </StoreLayout>
-        }
-      />
+      <Route element={<ProtectedCustomerRoute />}>
+        <Route
+          path="/checkout"
+          element={
+            <StoreLayout>
+              <CheckoutPage />
+            </StoreLayout>
+          }
+        />
 
-      <Route
-        path="/orders/:id"
-        element={
-          <StoreLayout>
-            <OrderDetailsPage />
-          </StoreLayout>
-        }
-      />
+        <Route
+          path="/my-orders"
+          element={
+            <StoreLayout>
+              <MyOrdersPage />
+            </StoreLayout>
+          }
+        />
 
-      <Route
-        path="/my-orders"
-        element={
-          <StoreLayout>
-            <MyOrdersPage />
-          </StoreLayout>
-        }
-      />
+        <Route
+          path="/orders/:id"
+          element={
+            <StoreLayout>
+              <OrderDetailsPage />
+            </StoreLayout>
+          }
+        />
+      </Route>
 
       <Route
         path="/about"
@@ -119,14 +136,43 @@ function AppRoutes() {
         }
       />
 
-      <Route
-        path="/login"
-        element={
-          <StoreLayout>
-            <LoginPage />
-          </StoreLayout>
-        }
-      />
+      <Route element={<GuestOnlyRoute />}>
+        <Route
+          path="/login"
+          element={
+            <StoreLayout>
+              <LoginPage />
+            </StoreLayout>
+          }
+        />
+
+        <Route
+          path="/register"
+          element={
+            <StoreLayout>
+              <RegisterPage />
+            </StoreLayout>
+          }
+        />
+
+        <Route
+          path="/forgot-password"
+          element={
+            <StoreLayout>
+              <ForgotPasswordPage />
+            </StoreLayout>
+          }
+        />
+
+        <Route
+          path="/reset-password/:token"
+          element={
+            <StoreLayout>
+              <ResetPasswordPage />
+            </StoreLayout>
+          }
+        />
+      </Route>
 
       <Route path="/admin/login" element={<AdminLoginPage />} />
 
@@ -154,6 +200,15 @@ function AppRoutes() {
           element={
             <AdminLayout>
               <AdminOrdersPage />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/orders/:id"
+          element={
+            <AdminLayout>
+              <AdminOrderDetailsPage />
             </AdminLayout>
           }
         />

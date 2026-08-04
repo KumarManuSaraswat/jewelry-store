@@ -25,21 +25,25 @@ const userSchema = new mongoose.Schema(
       enum: ["customer", "admin"],
       default: "customer",
     },
+    passwordResetToken: {
+      type: String,
+      default: "",
+    },
+    passwordResetExpires: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );
 
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
-
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  this.password = await bcrypt.hash(this.password, 10);
 });
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+  return bcrypt.compare(enteredPassword, this.password);
 };
 
 const User = mongoose.model("User", userSchema);
-
 export default User;

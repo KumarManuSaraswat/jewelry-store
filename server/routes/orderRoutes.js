@@ -8,6 +8,8 @@ import {
   markOrderAsPaid,
   getAllOrdersAdmin,
   updateOrderStatusAdmin,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
 } from "../controllers/orderController.js";
 
 const router = express.Router();
@@ -15,6 +17,10 @@ const router = express.Router();
 router.post("/", protect, createOrder);
 router.get("/my-orders", protect, getMyOrders);
 router.get("/:id", protect, getOrderById);
+
+router.post("/:id/create-razorpay-order", protect, createRazorpayOrder);
+router.post("/:id/verify-razorpay-payment", protect, verifyRazorpayPayment);
+
 router.put("/:id/pay", protect, markOrderAsPaid);
 
 router.get("/", protect, adminOnly, getAllOrdersAdmin);

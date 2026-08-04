@@ -7,7 +7,9 @@ function AboutPage() {
         <section className="about-hero">
           <div className="about-copy">
             <p className="eyebrow">About ORNIVA</p>
-            <h1 className="section-title">Jewelry designed for modern everyday elegance.</h1>
+            <h1 className="section-title">
+              Jewelry designed for modern everyday elegance.
+            </h1>
             <p className="section-subtitle">
               ORNIVA was imagined as a refined jewelry label for women who want
               pieces that feel elevated, wearable, and timeless without being
@@ -41,7 +43,9 @@ function AboutPage() {
           <div className="section-head">
             <div>
               <p className="eyebrow">Our philosophy</p>
-              <h2 className="section-title">Luxury in a lighter, more wearable form</h2>
+              <h2 className="section-title">
+                Luxury in a lighter, more wearable form
+              </h2>
             </div>
           </div>
 

@@ -1,12 +1,12 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { getUserInfo, logoutAdmin } from "../../utils/auth";
+import { getUserInfo, logoutUser } from "../../utils/auth";
 
 function AdminLayout({ children }) {
   const navigate = useNavigate();
   const user = getUserInfo();
 
   const handleLogout = () => {
-    logoutAdmin();
+    logoutUser();
     navigate("/admin/login");
   };
 
@@ -40,6 +40,9 @@ function AdminLayout({ children }) {
         <nav style={{ display: "grid", gap: "12px" }}>
           <NavLink to="/admin">Dashboard</NavLink>
           <NavLink to="/admin/products">Products</NavLink>
+          <NavLink to="/admin/orders">Orders</NavLink>
+          <NavLink to="/admin/users">Users</NavLink>
+          <NavLink to="/admin/customers">Customers</NavLink>
         </nav>
 
         <button

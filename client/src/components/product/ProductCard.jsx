@@ -1,11 +1,35 @@
 import { Link } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 
+const WHATSAPP_NUMBER = "917231932107";
+
 function ProductCard({ product, onQuickView }) {
   const { addToCart } = useCart();
 
-  const finalPrice =
-    product.discountPrice > 0 ? product.discountPrice : product.price;
+  const finalPrice = product.discountPrice > 0 ? product.discountPrice : product.price;
+  const inStock = product.stock > 0;
+
+  const cartPayload = {
+    product: product._id,
+    title: product.title,
+    price: finalPrice,
+    image: product.images?.[0] || "",
+    quantity: 1,
+    countInStock: product.stock || 0,
+  };
+
+  const handleWhatsAppOrder = () => {
+    const message = `Hello ORNIVA, I want to order this product.
+
+Product: ${product.title}
+Price: ₹${finalPrice}
+Category: ${product.category}
+
+Please confirm availability and order details.`;
+
+    const url = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <article className="product-card">
@@ -15,6 +39,7 @@ function ProductCard({ product, onQuickView }) {
           {product.isBestSeller && (
             <span className="badge badge-gold">BEST SELLER</span>
           )}
+          {!inStock ? <span className="badge badge-dark">OUT OF STOCK</span> : null}
         </div>
 
         <img
@@ -39,17 +64,29 @@ function ProductCard({ product, onQuickView }) {
           )}
         </div>
 
+        <p style={{ marginTop: "6px", color: "#666", fontSize: "14px" }}>
+          {inStock ? `Ready to ship · ${product.stock} in stock` : "Currently out of stock"}
+        </p>
+
         <div className="product-actions-row">
-          <button className="small-action-btn" type="button">
-            Wishlist
+          <button
+            className="small-action-btn"
+            type="button"
+            onClick={handleWhatsAppOrder}
+          >
+            WhatsApp
           </button>
+
           <button
             className="small-action-btn dark"
             type="button"
-            onClick={() => addToCart(product, 1)}
+            onClick={() => addToCart(cartPayload, 1)}
+            disabled={!inStock}
+            style={{ opacity: inStock ? 1 : 0.6, cursor: inStock ? "pointer" : "not-allowed" }}
           >
             Add to Bag
           </button>
+
           <button
             className="small-action-btn"
             type="button"
