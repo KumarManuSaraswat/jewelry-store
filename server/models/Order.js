@@ -38,7 +38,7 @@ const orderSchema = new mongoose.Schema(
 
     paymentMethod: {
       type: String,
-      enum: ["cod", "razorpay", "stripe", "upi"],
+      enum: ["cod", "whatsapp", "razorpay", "stripe", "upi"],
       default: "cod",
     },
 
@@ -64,6 +64,11 @@ const orderSchema = new mongoose.Schema(
     isDelivered: { type: Boolean, default: false },
     deliveredAt: { type: Date },
 
+    requestId: { type: String },
+    inventoryReserved: { type: Boolean, default: false },
+    inventoryReleased: { type: Boolean, default: false },
+    courier: { type: String, default: "" },
+    trackingNumber: { type: String, default: "" },
     razorpayOrderId: { type: String, default: "" },
     razorpayPaymentId: { type: String, default: "" },
 
@@ -78,6 +83,7 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+orderSchema.index({ user: 1, requestId: 1 }, { unique: true, partialFilterExpression: { requestId: { $type: 'string' } } });
 const Order = mongoose.model("Order", orderSchema);
 
 export default Order;

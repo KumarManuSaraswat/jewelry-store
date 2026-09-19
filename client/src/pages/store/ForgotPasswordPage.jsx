@@ -1,56 +1,67 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/axios";
-
-function ForgotPasswordPage() {
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submit(e) {
     e.preventDefault();
+    setBusy(true);
+    setError("");
+    setMessage("");
     try {
-      setLoading(true);
       const { data } = await api.post("/api/auth/forgot-password", { email });
-      setMessage(data.message || "If the account exists, a reset link has been generated.");
-    } catch (error) {
-      alert(error.response?.data?.message || "Failed to process request");
+      setMessage(data.message);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          "Unable to request a reset. Please try again.",
+      );
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  };
-
+  }
   return (
-    <div className="page-shell">
-      <div className="container" style={{ maxWidth: "520px" }}>
-        <div className="section-head">
-          <div>
-            <p className="eyebrow">Account recovery</p>
-            <h1 className="section-title">Forgot Password</h1>
-          </div>
+    <div className="page-shell container">
+      <div className="auth-shell">
+        <div className="auth-image" />
+        <div className="auth-form">
+          <p className="eyebrow">LET’S GET YOU BACK IN</p>
+          <h1>A fresh start.</h1>
+          <p>Enter your account email to request a password reset link.</p>
+          {error && (
+            <p className="error-message" role="alert">
+              {error}
+            </p>
+          )}
+          {message && (
+            <p className="success-message" role="status">
+              {message}
+            </p>
+          )}
+          <form className="form-stack" onSubmit={submit}>
+            <label>
+              Email address
+              <input
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
+            <button className="btn-primary" disabled={busy}>
+              {busy ? "Requesting…" : "Send reset link"}
+            </button>
+            <div className="auth-links">
+              <Link to="/login">Back to sign in</Link>
+              <Link to="/contact">Need help?</Link>
+            </div>
+          </form>
         </div>
-
-        <form className="admin-section-card" onSubmit={handleSubmit}>
-          <input
-            type="email"
-            placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <button className="btn-primary" type="submit" disabled={loading}>
-            {loading ? "Sending..." : "Send Reset Link"}
-          </button>
-
-          {message ? <p style={{ marginTop: "12px" }}>{message}</p> : null}
-
-          <p style={{ marginTop: "12px" }}>
-            <Link to="/login">Back to login</Link>
-          </p>
-        </form>
       </div>
     </div>
   );
 }
-
-export default ForgotPasswordPage;

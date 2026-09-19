@@ -1,0 +1,53 @@
+.owner-dashboard-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  align-self: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--soft);
+  color: var(--plum);
+  font-size: 11px;
+  white-space: nowrap;
+  min-height: 40px;
+}
+.owner-dashboard-link:hover {
+  background: var(--plum);
+  color: var(--paper);
+  border-color: var(--plum);
+}
+.owner-menu-link {
+  gap: 9px;
+  align-items: center;
+  font-weight: 600;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .owner-dashboard-link {
+    transition:
+      color 220ms ease,
+      background-color 220ms ease,
+      border-color 220ms ease;
+  }
+}
+@media (max-width: 900px) {
+  .owner-dashboard-link {
+    padding: 9px;
+  }
+  .owner-dashboard-link span {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .owner-dashboard-link {
+    border: 0;
+    background: transparent;
+    padding: 6px;
+    min-width: 35px;
+    min-height: 36px;
+  }
+}
+@media (max-width: 370px) {
+  .owner-nav .brand-logo { font-size: 36px; }
+  .owner-nav .brand-logo span { font-size: 5px; letter-spacing: .8px; }
+}

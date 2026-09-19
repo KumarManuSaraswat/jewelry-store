@@ -1,118 +1,200 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import api from "../../api/axios";
-import { getAuthConfig } from "../../utils/auth";
-
-const WHATSAPP_NUMBER = "917231932107";
-
-function AdminOrderDetailsPage() {
+import { money } from "../../utils/store";
+import OrderSummary from "../../components/OrderSummary";
+export default function AdminOrderDetailsPage() {
   const { id } = useParams();
   const [order, setOrder] = useState(null);
-
+  const [form, setForm] = useState({});
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState("");
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
-    const fetchOrder = async () => {
-      try {
-        const { data } = await api.get(`/api/orders/${id}`, getAuthConfig());
+    const controller = new AbortController();
+    api
+      .get("/api/orders/" + id, { signal: controller.signal })
+      .then(({ data }) => {
         setOrder(data);
-      } catch (error) {
-        console.error(error);
-        alert(error.response?.data?.message || "Failed to load order details");
-      }
-    };
-
-    fetchOrder();
+        setForm({
+          orderStatus: data.orderStatus,
+          paymentStatus: data.paymentStatus,
+          courier: data.courier || "",
+          trackingNumber: data.trackingNumber || "",
+        });
+      })
+      .catch((err) => {
+        if (err.code !== "ERR_CANCELED")
+          setError(err.response?.data?.message || "Unable to load order.");
+      });
+    return () => controller.abort();
   }, [id]);
-
-  if (!order) return <div>Loading order details...</div>;
-
-  const openCustomerWhatsApp = () => {
-    const itemsText = order.orderItems
-      .map((item) => `• ${item.title} x ${item.quantity}`)
-      .join("\n");
-
-    const message = `Hello ${order.shippingAddress?.fullName || "customer"}, 
-regarding your ORNIVA order:
-
-Order ID: ${order._id}
-Items:
-${itemsText}
-
-Total: ₹${order.totalPrice}
-
-Please reply if you need any changes or have any questions.`;
-
-    const url = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
+  async function save(e) {
+    e.preventDefault();
+    if (
+      form.orderStatus === "cancelled" &&
+      order.orderStatus !== "cancelled" &&
+      !window.confirm(
+        "Cancel this order and return its reserved items to inventory? Any paid refund must be arranged separately.",
+      )
+    )
+      return;
+    setBusy(true);
+    setError("");
+    setSaved("");
+    try {
+      const { data } = await api.put("/api/orders/" + id + "/status", form);
+      setOrder(data);
+      setSaved("Order updated.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not update order.");
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <div>
-      <div className="section-head" style={{ marginBottom: "24px" }}>
-        <div>
-          <p className="eyebrow">Admin view</p>
-          <h1 className="section-title">
-            Order #{order._id.slice(-6).toUpperCase()}
-          </h1>
-        </div>
-      </div>
-
-      <div className="admin-section-card">
-        <h3>Customer</h3>
-        <p>
-          <strong>Name:</strong> {order.user?.name || order.shippingAddress?.fullName}
+      <Link className="text-link" to="/admin/orders">
+        ← All orders
+      </Link>
+      {error && (
+        <p className="error-message" role="alert">
+          {error}
         </p>
-        <p><strong>Email:</strong> {order.user?.email || "No email"}</p>
-        <p><strong>Phone:</strong> {order.shippingAddress?.phone}</p>
-
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={openCustomerWhatsApp}
-          style={{ marginTop: "12px" }}
-        >
-          WhatsApp Customer
-        </button>
-      </div>
-
-      <div className="admin-section-card">
-        <h3>Shipping Address</h3>
-        <p>{order.shippingAddress?.fullName}</p>
-        <p>{order.shippingAddress?.phone}</p>
-        <p>{order.shippingAddress?.addressLine1}</p>
-        {order.shippingAddress?.addressLine2 ? <p>{order.shippingAddress.addressLine2}</p> : null}
-        <p>
-          {order.shippingAddress?.city}, {order.shippingAddress?.state} -{" "}
-          {order.shippingAddress?.postalCode}
-        </p>
-        <p>{order.shippingAddress?.country}</p>
-      </div>
-
-      <div className="admin-section-card">
-        <h3>Order Info</h3>
-        <p><strong>Payment Method:</strong> {order.paymentMethod}</p>
-        <p><strong>Payment Status:</strong> {order.paymentStatus}</p>
-        <p><strong>Order Status:</strong> {order.orderStatus}</p>
-        <p><strong>Total:</strong> ₹{order.totalPrice}</p>
-      </div>
-
-      <div className="admin-section-card">
-        <h3>Items</h3>
-        <div style={{ display: "grid", gap: "12px" }}>
-          {order.orderItems.map((item) => (
-            <div key={item.product} className="user-role-row">
-              <div>
-                <strong>{item.title}</strong>
-                <p style={{ margin: "6px 0 0", color: "#666" }}>
-                  ₹{item.price} × {item.quantity}
-                </p>
-              </div>
-              <strong>₹{item.price * item.quantity}</strong>
+      )}
+      {!order ? (
+        !error && <p role="status">Loading order…</p>
+      ) : (
+        <>
+          <div className="admin-heading" style={{ marginTop: 25 }}>
+            <div>
+              <p className="eyebrow">
+                {new Date(order.createdAt).toLocaleDateString("en-IN")}
+              </p>
+              <h1>Order #{id.slice(-6).toUpperCase()}</h1>
             </div>
-          ))}
-        </div>
-      </div>
+            <span className={"status-badge " + order.orderStatus}>
+              {order.orderStatus}
+            </span>
+          </div>
+          {saved && (
+            <p className="success-message" role="status">
+              {saved}
+            </p>
+          )}
+          <div className="admin-columns">
+            <div>
+              <section className="admin-section-card">
+                <h2>Ordered pieces</h2>
+                {order.orderItems.map((item) => (
+                  <div className="user-role-row" key={item.product}>
+                    <div className="table-product">
+                      <img src={item.image} alt="" />
+                      <div>
+                        {item.title}
+                        <small>
+                          {money(item.price)} × {item.quantity}
+                        </small>
+                      </div>
+                    </div>
+                    <strong>{money(item.price * item.quantity)}</strong>
+                  </div>
+                ))}
+              </section>
+              <section className="admin-section-card">
+                <h2>Delivery details</h2>
+                <p>
+                  {order.shippingAddress.fullName}
+                  <br />
+                  {order.shippingAddress.addressLine1}
+                  <br />
+                  {order.shippingAddress.addressLine2 && (
+                    <>
+                      {order.shippingAddress.addressLine2}
+                      <br />
+                    </>
+                  )}
+                  {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
+                  {order.shippingAddress.postalCode}
+                  <br />
+                  {order.shippingAddress.country}
+                </p>
+                <p>
+                  <a href={"tel:" + order.shippingAddress.phone}>
+                    {order.shippingAddress.phone}
+                  </a>
+                  <br />
+                  {order.user?.email}
+                </p>
+              </section>
+              <section className="admin-section-card">
+                <h2>Fulfillment & payment</h2>
+                <form className="form-grid" onSubmit={save}>
+                  <label>
+                    Order status
+                    <select
+                      value={form.orderStatus}
+                      onChange={(e) =>
+                        setForm({ ...form, orderStatus: e.target.value })
+                      }
+                    >
+                      {[
+                        "pending",
+                        "processing",
+                        "shipped",
+                        "delivered",
+                        "cancelled",
+                      ].map((s) => (
+                        <option key={s}>{s}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Payment status
+                    <select
+                      value={form.paymentStatus}
+                      onChange={(e) =>
+                        setForm({ ...form, paymentStatus: e.target.value })
+                      }
+                    >
+                      {["pending", "paid", "failed", "refunded"].map((s) => (
+                        <option key={s}>{s}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Courier
+                    <input
+                      value={form.courier}
+                      onChange={(e) =>
+                        setForm({ ...form, courier: e.target.value })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Tracking number
+                    <input
+                      value={form.trackingNumber}
+                      onChange={(e) =>
+                        setForm({ ...form, trackingNumber: e.target.value })
+                      }
+                    />
+                  </label>
+                  <p className="summary-note full-width">
+                    Payment method: {order.paymentMethod}. Marking a refund
+                    records its status; issue the actual refund through your
+                    payment provider.
+                  </p>
+                  <button className="btn-primary full-width" disabled={busy}>
+                    {busy ? "Saving…" : "Save order updates"}
+                  </button>
+                </form>
+              </section>
+            </div>
+            <OrderSummary totals={order} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
-
-export default AdminOrderDetailsPage;

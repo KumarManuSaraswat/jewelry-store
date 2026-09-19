@@ -57,7 +57,9 @@ export const getAdminStats = async (req, res) => {
 
 export const getAllUsersForAdmin = async (req, res) => {
   try {
-    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    const users = await User.find()
+      .select("name email role createdAt")
+      .sort({ createdAt: -1 });
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -67,8 +69,16 @@ export const getAllUsersForAdmin = async (req, res) => {
 export const updateUserRole = async (req, res) => {
   try {
     const { role } = req.body;
+    if (!["admin", "customer"].includes(role))
+      return res.status(400).json({ message: "Invalid role." });
+    if (req.params.id === req.user._id.toString() && role !== "admin")
+      return res
+        .status(400)
+        .json({ message: "You cannot remove your own owner access." });
 
-    const user = await User.findById(req.params.id).select("-password");
+    const user = await User.findById(req.params.id).select(
+      "name email role createdAt",
+    );
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });

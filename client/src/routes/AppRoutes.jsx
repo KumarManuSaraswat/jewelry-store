@@ -1,8 +1,11 @@
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
-
 import HomePage from "../pages/store/HomePage";
+import LandingPage from "../pages/store/LandingPage";
+import SiteMotion from "../components/SiteMotion";
+import { updatePageMetadata } from "../utils/pageMetadata";
 import ShopPage from "../pages/store/ShopPage";
 import ProductPage from "../pages/store/ProductPage";
 import CartPage from "../pages/store/CartPage";
@@ -12,236 +15,105 @@ import MyOrdersPage from "../pages/store/MyOrdersPage";
 import AboutPage from "../pages/store/AboutPage";
 import ContactPage from "../pages/store/ContactPage";
 import NotFoundPage from "../pages/store/NotFoundPage";
-
-import LoginPage from "../pages/store/LoginPage";
-import RegisterPage from "../pages/store/RegisterPage";
+import AuthPage from "../pages/store/AuthPage";
+import InfoPage from "../pages/store/InfoPage";
+import WishlistPage from "../pages/store/WishlistPage";
 import ForgotPasswordPage from "../pages/store/ForgotPasswordPage";
 import ResetPasswordPage from "../pages/store/ResetPasswordPage";
-
-import AdminLoginPage from "../pages/admin/AdminLoginPage";
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
 import AdminProductsPage from "../pages/admin/AdminProductsPage";
 import AdminOrdersPage from "../pages/admin/AdminOrdersPage";
 import AdminOrderDetailsPage from "../pages/admin/AdminOrderDetailsPage";
 import AdminUsersPage from "../pages/admin/AdminUsersPage";
 import AdminCustomersPage from "../pages/admin/AdminCustomersPage";
-
 import ProtectedAdminRoute from "./ProtectedAdminRoute";
 import AdminLayout from "../components/admin/AdminLayout";
-import { getUserInfo } from "../utils/auth";
-
-function StoreLayout({ children }) {
+import useUserInfo from "../hooks/useUserInfo";
+function StoreLayout() {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: "80vh" }}>{children}</main>
+      <main id="main-content">
+        <Outlet />
+      </main>
       <Footer />
     </>
   );
 }
-
 function ProtectedCustomerRoute() {
-  const user = getUserInfo();
-  return user?.token ? <Outlet /> : <Navigate to="/login" replace />;
-}
-
-function GuestOnlyRoute() {
-  const user = getUserInfo();
-  return user?.token ? <Navigate to="/" replace /> : <Outlet />;
-}
-
-function AppRoutes() {
-  return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <StoreLayout>
-            <HomePage />
-          </StoreLayout>
-        }
-      />
-
-      <Route
-        path="/shop"
-        element={
-          <StoreLayout>
-            <ShopPage />
-          </StoreLayout>
-        }
-      />
-
-      <Route
-        path="/product/:slug"
-        element={
-          <StoreLayout>
-            <ProductPage />
-          </StoreLayout>
-        }
-      />
-
-      <Route
-        path="/cart"
-        element={
-          <StoreLayout>
-            <CartPage />
-          </StoreLayout>
-        }
-      />
-
-      <Route element={<ProtectedCustomerRoute />}>
-        <Route
-          path="/checkout"
-          element={
-            <StoreLayout>
-              <CheckoutPage />
-            </StoreLayout>
-          }
-        />
-
-        <Route
-          path="/my-orders"
-          element={
-            <StoreLayout>
-              <MyOrdersPage />
-            </StoreLayout>
-          }
-        />
-
-        <Route
-          path="/orders/:id"
-          element={
-            <StoreLayout>
-              <OrderDetailsPage />
-            </StoreLayout>
-          }
-        />
-      </Route>
-
-      <Route
-        path="/about"
-        element={
-          <StoreLayout>
-            <AboutPage />
-          </StoreLayout>
-        }
-      />
-
-      <Route
-        path="/contact"
-        element={
-          <StoreLayout>
-            <ContactPage />
-          </StoreLayout>
-        }
-      />
-
-      <Route element={<GuestOnlyRoute />}>
-        <Route
-          path="/login"
-          element={
-            <StoreLayout>
-              <LoginPage />
-            </StoreLayout>
-          }
-        />
-
-        <Route
-          path="/register"
-          element={
-            <StoreLayout>
-              <RegisterPage />
-            </StoreLayout>
-          }
-        />
-
-        <Route
-          path="/forgot-password"
-          element={
-            <StoreLayout>
-              <ForgotPasswordPage />
-            </StoreLayout>
-          }
-        />
-
-        <Route
-          path="/reset-password/:token"
-          element={
-            <StoreLayout>
-              <ResetPasswordPage />
-            </StoreLayout>
-          }
-        />
-      </Route>
-
-      <Route path="/admin/login" element={<AdminLoginPage />} />
-
-      <Route element={<ProtectedAdminRoute />}>
-        <Route
-          path="/admin"
-          element={
-            <AdminLayout>
-              <AdminDashboardPage />
-            </AdminLayout>
-          }
-        />
-
-        <Route
-          path="/admin/products"
-          element={
-            <AdminLayout>
-              <AdminProductsPage />
-            </AdminLayout>
-          }
-        />
-
-        <Route
-          path="/admin/orders"
-          element={
-            <AdminLayout>
-              <AdminOrdersPage />
-            </AdminLayout>
-          }
-        />
-
-        <Route
-          path="/admin/orders/:id"
-          element={
-            <AdminLayout>
-              <AdminOrderDetailsPage />
-            </AdminLayout>
-          }
-        />
-
-        <Route
-          path="/admin/users"
-          element={
-            <AdminLayout>
-              <AdminUsersPage />
-            </AdminLayout>
-          }
-        />
-
-        <Route
-          path="/admin/customers"
-          element={
-            <AdminLayout>
-              <AdminCustomersPage />
-            </AdminLayout>
-          }
-        />
-      </Route>
-
-      <Route
-        path="*"
-        element={
-          <StoreLayout>
-            <NotFoundPage />
-          </StoreLayout>
-        }
-      />
-    </Routes>
+  const location = useLocation();
+  const user = useUserInfo();
+  return user?.token ? (
+    <Outlet />
+  ) : (
+    <Navigate
+      to="/login"
+      replace
+      state={{ from: location.pathname + location.search }}
+    />
   );
 }
-
-export default AppRoutes;
+function ProductRoute() {
+  const { pathname } = useLocation();
+  return <ProductPage key={pathname} />;
+}
+export default function AppRoutes() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    updatePageMetadata(pathname);
+  }, [pathname]);
+  return (
+    <>
+      <SiteMotion />
+      <Routes>
+        <Route element={<StoreLayout />}>
+          <Route index element={<LandingPage />} />
+          <Route path="collections" element={<HomePage />} />
+          <Route path="shop" element={<ShopPage />} />
+          <Route path="product/:slug" element={<ProductRoute />} />
+          <Route path="cart" element={<CartPage />} />
+          <Route path="wishlist" element={<WishlistPage />} />
+          <Route path="about" element={<AboutPage />} />
+          <Route path="contact" element={<ContactPage />} />
+          <Route path="care" element={<InfoPage type="care" />} />
+          <Route
+            path="shipping-returns"
+            element={<InfoPage type="shipping" />}
+          />
+          <Route path="login" element={<AuthPage />} />
+          <Route path="register" element={<AuthPage mode="register" />} />
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="reset-password/:token" element={<ResetPasswordPage />} />
+          <Route element={<ProtectedCustomerRoute />}>
+            <Route path="checkout" element={<CheckoutPage />} />
+            <Route path="my-orders" element={<MyOrdersPage />} />
+            <Route path="orders/:id" element={<OrderDetailsPage />} />
+          </Route>
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+        <Route
+          path="admin/login"
+          element={<Navigate to="/login" replace state={{ from: "/admin" }} />}
+        />
+        <Route element={<ProtectedAdminRoute />}>
+          <Route
+            path="admin"
+            element={
+              <AdminLayout>
+                <Outlet />
+              </AdminLayout>
+            }
+          >
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="products" element={<AdminProductsPage />} />
+            <Route path="orders" element={<AdminOrdersPage />} />
+            <Route path="orders/:id" element={<AdminOrderDetailsPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="customers" element={<AdminCustomersPage />} />
+          </Route>
+        </Route>
+      </Routes>
+    </>
+  );
+}

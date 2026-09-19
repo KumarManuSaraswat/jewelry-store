@@ -1,93 +1,88 @@
 import { Link } from "react-router-dom";
-
-function Footer() {
+import Icon from "../Icon";
+export default function Footer() {
   return (
     <footer className="footer-large">
       <div className="container">
-        <div className="footer-grid">
-          <div className="footer-brand">
-            <div className="brand-mark">ORNIVA</div>
+        <div className="footer-top">
+          <div>
+            <p className="eyebrow">A LITTLE CLOSER TO ORNIVA</p>
+            <h2>
+              Good things deserve
+              <br />
+              <em>to be shared.</em>
+            </h2>
+          </div>
+          <div>
             <p>
-              Heirloom-quality everyday jewelry, designed to feel elevated,
-              wearable, and loved for years.
+              New pieces, everyday inspiration, and a little sparkle.
+              <br />
+              Find us on Instagram.
             </p>
-
-            <div className="footer-socials">
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noreferrer noopener"
-              >
-                Instagram
-              </a>
-              <a
-                href="https://pinterest.com"
-                target="_blank"
-                rel="noreferrer noopener"
-              >
-                Pinterest
-              </a>
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noreferrer noopener"
-              >
-                Facebook
-              </a>
-              <a
-                href="https://wa.me/"
-                target="_blank"
-                rel="noreferrer noopener"
-              >
-                WhatsApp
-              </a>
-            </div>
-          </div>
-
-          <div className="footer-col">
-            <h4>Shop</h4>
-            <div className="footer-links">
-              <Link to="/shop">All Jewelry</Link>
-              <Link to="/shop?sort=newest">New Arrivals</Link>
-              <Link to="/shop?filter=best-seller">Best Sellers</Link>
-              <Link to="/shop">Collections</Link>
-            </div>
-          </div>
-
-          <div className="footer-col">
-            <h4>Support</h4>
-            <div className="footer-links">
-              <Link to="/contact">Contact Us</Link>
-              <Link to="/contact">FAQs</Link>
-              <Link to="/contact">Shipping Policy</Link>
-              <Link to="/contact">Returns</Link>
-            </div>
-          </div>
-
-          <div className="footer-col">
-            <h4>Company</h4>
-            <div className="footer-links">
-              <Link to="/about">About ORNIVA</Link>
-              <Link to="/about">Our Promise</Link>
-              <Link to="/contact">Privacy Policy</Link>
-              <Link to="/contact">Terms & Conditions</Link>
-              <Link to="/my-orders">My Orders</Link>
-            </div>
+            <a
+              href="https://instagram.com/_orniva"
+              target="_blank"
+              rel="noreferrer"
+              className="text-link"
+            >
+              Follow @_orniva <Icon name="arrow" size={18} />
+            </a>
           </div>
         </div>
-
-        <div className="footer-bottom">
-          <p>© 2026 ORNIVA. All rights reserved.</p>
-
-          <div className="payment-row">
-            <span className="payment-pill">CASH ON DELIVERY</span>
-            <span className="payment-pill">WHATSAPP ORDER</span>
-            <span className="payment-pill">UPI</span>
+        <div className="footer-grid">
+          <div className="footer-brand">
+            <Link className="brand-logo" to="/">
+              orniva
+            </Link>
+            <p>
+              Timeless jewelry. Thoughtful details.
+              <br />
+              Made to be part of your every day.
+            </p>
+            <a href="mailto:Orniva.online@gmail.com">Orniva.online@gmail.com</a>
           </div>
+          <div>
+            <h3>Explore</h3>
+            <Link to="/shop">All jewelry</Link>
+            <Link to="/shop?collection=new">New arrivals</Link>
+            <Link to="/shop?collection=bestsellers">Best sellers</Link>
+            <Link to="/wishlist">Your wishlist</Link>
+          </div>
+          <div>
+            <h3>Here to help</h3>
+            <Link to="/contact">Contact us</Link>
+            <Link to="/care">Jewelry care</Link>
+            <Link to="/shipping-returns">Shipping & returns</Link>
+            <Link to="/my-orders">Track your order</Link>
+          </div>
+          <div>
+            <h3>About Orniva</h3>
+            <Link to="/">Meet Orniva</Link>
+            <Link to="/about">Our story</Link>
+            <a
+              href="https://instagram.com/_orniva"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Instagram
+            </a>
+            <a
+              href="https://wa.me/917231932107"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Chat on WhatsApp
+            </a>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <span>
+            © {new Date().getFullYear()} Orniva. All rights reserved.
+          </span>
+          <span>Made with a little love. Worn with a little confidence.</span>
+          <span>Cash on delivery · WhatsApp orders</span>
         </div>
       </div>
     </footer>
   );
 }
-
-export default Footer;

@@ -1,56 +1,75 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import api from "../../api/axios";
-
-function ResetPasswordPage() {
+export default function ResetPasswordPage() {
   const { token } = useParams();
-  const navigate = useNavigate();
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  async function submit(e) {
     e.preventDefault();
-    try {
-      setLoading(true);
-      await api.post(`/api/auth/reset-password/${token}`, { password });
-      alert("Password reset successful");
-      navigate("/login");
-    } catch (error) {
-      alert(error.response?.data?.message || "Reset failed");
-    } finally {
-      setLoading(false);
+    if (password !== confirm) {
+      setError("Your passwords don’t match.");
+      return;
     }
-  };
-
+    setBusy(true);
+    setError("");
+    try {
+      await api.post("/api/auth/reset-password/" + token, { password });
+      setDone(true);
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to reset your password.");
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
-    <div className="page-shell">
-      <div className="container" style={{ maxWidth: "520px" }}>
-        <div className="section-head">
-          <div>
-            <p className="eyebrow">Set a new password</p>
-            <h1 className="section-title">Reset Password</h1>
-          </div>
+    <div className="container page-shell content-narrow">
+      <p className="eyebrow">YOUR ORNIVA ACCOUNT</p>
+      <h1>A new beginning.</h1>
+      {done ? (
+        <div className="empty-state">
+          <h3>Your password has been updated.</h3>
+          <Link className="btn-primary" to="/login">
+            Sign in
+          </Link>
         </div>
-
-        <form className="admin-section-card" onSubmit={handleSubmit}>
-          <input
-            type="password"
-            placeholder="New password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <button className="btn-primary" type="submit" disabled={loading}>
-            {loading ? "Resetting..." : "Reset Password"}
+      ) : (
+        <form className="form-stack" onSubmit={submit}>
+          {error && (
+            <p className="error-message" role="alert">
+              {error}
+            </p>
+          )}
+          <label>
+            New password
+            <input
+              type="password"
+              autoComplete="new-password"
+              minLength="8"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+          <label>
+            Confirm new password
+            <input
+              type="password"
+              autoComplete="new-password"
+              minLength="8"
+              required
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+            />
+          </label>
+          <button className="btn-primary" disabled={busy}>
+            {busy ? "Updating…" : "Update password"}
           </button>
-
-          <p style={{ marginTop: "12px" }}>
-            <Link to="/login">Back to login</Link>
-          </p>
         </form>
-      </div>
+      )}
     </div>
   );
 }
-
-export default ResetPasswordPage;

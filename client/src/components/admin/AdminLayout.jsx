@@ -1,68 +1,55 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { getUserInfo, logoutUser } from "../../utils/auth";
-
-function AdminLayout({ children }) {
+import Icon from "../Icon";
+export default function AdminLayout({ children }) {
   const navigate = useNavigate();
   const user = getUserInfo();
-
-  const handleLogout = () => {
-    logoutUser();
-    navigate("/admin/login");
-  };
-
   return (
-    <div style={{ minHeight: "100vh", display: "grid", gridTemplateColumns: "240px 1fr" }}>
-      <aside
-        style={{
-          borderRight: "1px solid #e5e5e5",
-          padding: "24px",
-          background: "#faf8f5",
-        }}
-      >
-        <Link
-          to="/admin"
-          style={{
-            textDecoration: "none",
-            color: "#111",
-            fontSize: "22px",
-            fontWeight: "700",
-            display: "inline-block",
-            marginBottom: "24px",
-          }}
-        >
-          ORNIVA Admin
+    <div className="admin-shell">
+      <aside className="admin-sidebar">
+        <Link className="brand-logo" to="/admin">
+          orniva
         </Link>
-
-        <p style={{ color: "#666", marginBottom: "20px" }}>
-          {user?.name || "Admin"}
-        </p>
-
-        <nav style={{ display: "grid", gap: "12px" }}>
-          <NavLink to="/admin">Dashboard</NavLink>
-          <NavLink to="/admin/products">Products</NavLink>
-          <NavLink to="/admin/orders">Orders</NavLink>
-          <NavLink to="/admin/users">Users</NavLink>
-          <NavLink to="/admin/customers">Customers</NavLink>
+        <p className="eyebrow">THE OWNER WORKSPACE</p>
+        <nav aria-label="Store management">
+          {[
+            ["", "Overview", "grid"],
+            ["products", "Products & inventory", "spark"],
+            ["orders", "Orders", "bag"],
+            ["customers", "Customers", "user"],
+            ["users", "Team & access", "box"],
+          ].map(([path, label, icon]) => (
+            <NavLink
+              key={path}
+              end={!path}
+              to={"/admin" + (path ? "/" + path : "")}
+            >
+              <Icon name={icon} size={19} />
+              {label}
+            </NavLink>
+          ))}
         </nav>
-
-        <button
-          onClick={handleLogout}
-          style={{
-            marginTop: "24px",
-            padding: "10px 14px",
-            cursor: "pointer",
-            border: "1px solid #ddd",
-            borderRadius: "8px",
-            background: "#fff",
-          }}
-        >
-          Logout
-        </button>
+        <div className="admin-sidebar-bottom">
+          <Link to="/">
+            Visit your store <Icon name="arrow" size={16} />
+          </Link>
+          <button
+            onClick={() => {
+              logoutUser();
+              navigate("/login");
+            }}
+          >
+            <Icon name="logout" size={16} /> Sign out
+          </button>
+        </div>
       </aside>
-
-      <main style={{ padding: "32px" }}>{children}</main>
+      <div className="admin-workspace">
+        <header className="admin-topbar">
+          <span>ORNIVA / STORE MANAGEMENT</span>
+          <span>{user?.name || "Store owner"}</span>
+        </header>
+        <main className="admin-content">{children}</main>
+      </div>
     </div>
   );
 }
-
-export default AdminLayout;

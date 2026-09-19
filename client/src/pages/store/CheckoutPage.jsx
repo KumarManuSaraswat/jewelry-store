@@ -1,16 +1,22 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 import { useCart } from "../../context/CartContext";
-import { getAuthConfig } from "../../utils/auth";
-
-const WHATSAPP_NUMBER = "917231932107";
-
-function CheckoutPage() {
-  const navigate = useNavigate();
+import OrderSummary from "../../components/OrderSummary";
+import { money } from "../../utils/store";
+const fields = [
+  ["fullName", "Full name", "name"],
+  ["phone", "Phone number", "tel"],
+  ["addressLine1", "Street address", "address-line1"],
+  ["addressLine2", "Apartment, landmark (optional)", "address-line2"],
+  ["city", "City", "address-level2"],
+  ["state", "State", "address-level1"],
+  ["postalCode", "PIN code", "postal-code"],
+];
+export default function CheckoutPage() {
   const { cartItems, totals, clearCart } = useCart();
-
-  const [formData, setFormData] = useState({
+  const navigate = useNavigate();
+  const [form, setForm] = useState({
     fullName: "",
     phone: "",
     addressLine1: "",
@@ -21,190 +27,192 @@ function CheckoutPage() {
     country: "India",
     paymentMethod: "cod",
   });
-
   const [loading, setLoading] = useState(false);
-
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  };
-
-  const buildOrderMessage = (orderId) => {
-    const itemsText = cartItems
-      .map((item) => `• ${item.title} x ${item.quantity} = ₹${item.price * item.quantity}`)
-      .join("\n");
-
-    return `Hello ORNIVA, I want to place an order.
-
-Order ID: ${orderId}
-Name: ${formData.fullName}
-Phone: ${formData.phone}
-Address: ${formData.addressLine1}${formData.addressLine2 ? ", " + formData.addressLine2 : ""}
-City: ${formData.city}
-State: ${formData.state}
-Postal Code: ${formData.postalCode}
-Country: ${formData.country}
-
-Items:
-${itemsText}
-
-Items Total: ₹${totals.itemsPrice}
-Shipping: ₹${totals.shippingPrice}
-Tax: ₹${totals.taxPrice}
-Grand Total: ₹${totals.totalPrice}
-
-Payment Method: ${formData.paymentMethod === "cod" ? "Cash on Delivery" : "WhatsApp Manual Confirmation"}
-
-Please confirm the order.`;
-  };
-
-  const openWhatsApp = (message) => {
-    const url = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  const handlePlaceOrder = async (e) => {
+  const [error, setError] = useState("");
+  const [onlinePayment, setOnlinePayment] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    api
+      .get("/api/store/config", { signal: controller.signal })
+      .then(({ data }) => setOnlinePayment(data.onlinePayment === true))
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+  const requestId = useRef(crypto.randomUUID());
+  async function placeOrder(e) {
     e.preventDefault();
-
-    if (!cartItems.length) {
-      alert("Your cart is empty");
-      return;
-    }
-
+    if (loading) return;
+    setLoading(true);
+    setError("");
     try {
-      setLoading(true);
-
-      const payload = {
+      const { paymentMethod, ...shippingAddress } = form;
+      const { data } = await api.post("/api/orders", {
         orderItems: cartItems.map((item) => ({
           product: item.product,
           quantity: item.quantity,
         })),
-        shippingAddress: {
-          fullName: formData.fullName,
-          phone: formData.phone,
-          addressLine1: formData.addressLine1,
-          addressLine2: formData.addressLine2,
-          city: formData.city,
-          state: formData.state,
-          postalCode: formData.postalCode,
-          country: formData.country,
-        },
-        paymentMethod: formData.paymentMethod,
-      };
-
-      const { data: createdOrder } = await api.post(
-        "/api/orders",
-        payload,
-        getAuthConfig()
-      );
-
-      const message = buildOrderMessage(createdOrder._id);
-
+        shippingAddress,
+        paymentMethod,
+        requestId: requestId.current,
+      });
       clearCart();
-      navigate(`/orders/${createdOrder._id}`);
-      openWhatsApp(message);
-    } catch (error) {
-      console.error(error);
-      alert(error.response?.data?.message || "Failed to place order");
+      navigate("/orders/" + data._id);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          "We couldn’t place your order. Your bag is saved. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
-  };
-
+  }
+  if (!cartItems.length)
+    return (
+      <div className="page-shell container">
+        <div className="empty-state">
+          <h1>Your bag needs a little love.</h1>
+          <Link to="/shop" className="btn-primary">
+            Find your favorites
+          </Link>
+        </div>
+      </div>
+    );
   return (
     <div className="page-shell">
       <div className="container">
+        <p className="checkout-step">
+          <Link to="/cart">01 BAG</Link> &nbsp; / &nbsp; 02 DETAILS &nbsp; /
+          &nbsp; 03 CONFIRMATION
+        </p>
         <div className="section-head">
           <div>
-            <p className="eyebrow">Secure checkout</p>
-            <h1 className="section-title">Place Your Order</h1>
+            <p className="eyebrow">ALMOST YOURS</p>
+            <h1 className="section-title">A little closer to you.</h1>
           </div>
         </div>
-
-        <form className="shop-layout" onSubmit={handlePlaceOrder}>
-          <div className="admin-section-card" style={{ marginTop: 0 }}>
-            <h2 style={{ marginTop: 0 }}>Shipping Information</h2>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                gap: "14px",
-              }}
-            >
-              <input name="fullName" placeholder="Full Name" value={formData.fullName} onChange={handleChange} required />
-              <input name="phone" placeholder="Phone Number" value={formData.phone} onChange={handleChange} required />
-              <input name="addressLine1" placeholder="Address Line 1" value={formData.addressLine1} onChange={handleChange} required />
-              <input name="addressLine2" placeholder="Address Line 2" value={formData.addressLine2} onChange={handleChange} />
-              <input name="city" placeholder="City" value={formData.city} onChange={handleChange} required />
-              <input name="state" placeholder="State" value={formData.state} onChange={handleChange} required />
-              <input name="postalCode" placeholder="Postal Code" value={formData.postalCode} onChange={handleChange} required />
-              <input name="country" placeholder="Country" value={formData.country} onChange={handleChange} required />
-            </div>
-
-            <h2 style={{ marginTop: "28px" }}>Payment Method</h2>
-
-            <div style={{ display: "grid", gap: "10px" }}>
-              <label className="filter-chip">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="cod"
-                  checked={formData.paymentMethod === "cod"}
-                  onChange={handleChange}
-                />{" "}
-                Cash on Delivery
-              </label>
-
-              <label className="filter-chip">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="whatsapp"
-                  checked={formData.paymentMethod === "whatsapp"}
-                  onChange={handleChange}
-                />{" "}
-                WhatsApp Manual Confirmation
-              </label>
-            </div>
+        {error && (
+          <p className="error-message" role="alert">
+            {error}
+          </p>
+        )}
+        <form className="checkout-layout" onSubmit={placeOrder}>
+          <div>
+            <section className="checkout-section">
+              <h2>Where should the joy arrive?</h2>
+              <div className="form-grid">
+                {fields.map(([name, label, autoComplete]) => (
+                  <label key={name}>
+                    {label}
+                    <input
+                      name={name}
+                      autoComplete={autoComplete}
+                      type={name === "phone" ? "tel" : "text"}
+                      inputMode={
+                        ["phone", "postalCode"].includes(name)
+                          ? "numeric"
+                          : undefined
+                      }
+                      pattern={
+                        name === "phone"
+                          ? "[+]?[0-9 ()-]{10,16}"
+                          : name === "postalCode"
+                            ? "[1-9][0-9]{5}"
+                            : undefined
+                      }
+                      maxLength={name === "postalCode" ? 6 : 200}
+                      required={name !== "addressLine2"}
+                      value={form[name]}
+                      onChange={(e) =>
+                        setForm({ ...form, [name]: e.target.value })
+                      }
+                    />
+                  </label>
+                ))}
+                <label>
+                  Country
+                  <input value="India" readOnly autoComplete="country-name" />
+                </label>
+              </div>
+            </section>
+            <section className="checkout-section">
+              <h2>How would you like to pay?</h2>
+              <div className="form-stack">
+                {onlinePayment && (
+                  <label className="payment-choice">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="razorpay"
+                      checked={form.paymentMethod === "razorpay"}
+                      onChange={() =>
+                        setForm({ ...form, paymentMethod: "razorpay" })
+                      }
+                    />
+                    <span>
+                      UPI / Cards / Net banking
+                      <small>
+                        Complete secure payment on the next screen with
+                        Razorpay.
+                      </small>
+                    </span>
+                  </label>
+                )}
+                {[
+                  ["cod", "Cash on delivery", "Pay when your order arrives."],
+                  [
+                    "whatsapp",
+                    "Arrange with Orniva on WhatsApp",
+                    "Place your order, then contact our team to confirm payment.",
+                  ],
+                ].map(([value, title, note]) => (
+                  <label className="payment-choice" key={value}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value={value}
+                      checked={form.paymentMethod === value}
+                      onChange={(e) =>
+                        setForm({ ...form, paymentMethod: e.target.value })
+                      }
+                    />
+                    <span>
+                      {title}
+                      <small>{note}</small>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </section>
+            <p className="summary-note">
+              Please review your details before placing your order.{" "}
+              <Link to="/shipping-returns" className="link-button">
+                Shipping & returns
+              </Link>
+            </p>
           </div>
-
-          <div className="shop-sidebar">
-            <h3 className="filter-title">Order Summary</h3>
-
-            <div style={{ display: "grid", gap: "12px", marginBottom: "16px" }}>
+          <OrderSummary totals={totals}>
+            <div>
               {cartItems.map((item) => (
-                <div key={item.product} style={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
+                <div className="summary-row" key={item.product}>
                   <span>
                     {item.title} × {item.quantity}
                   </span>
-                  <strong>₹{item.price * item.quantity}</strong>
+                  <span>{money(item.price * item.quantity)}</span>
                 </div>
               ))}
             </div>
-
-            <div className="filter-list">
-              <div className="filter-chip">Items: ₹{totals.itemsPrice}</div>
-              <div className="filter-chip">Shipping: ₹{totals.shippingPrice}</div>
-              <div className="filter-chip">Tax: ₹{totals.taxPrice}</div>
-              <div className="filter-chip active">Total: ₹{totals.totalPrice}</div>
-            </div>
-
-            <button
-              className="btn-primary"
-              type="submit"
-              style={{ marginTop: "18px", width: "100%", justifyContent: "center" }}
-              disabled={loading}
-            >
-              {loading ? "Processing..." : "Place Order on WhatsApp"}
+            <button className="btn-primary" type="submit" disabled={loading}>
+              {loading
+                ? "Placing your order…"
+                : "Place order · " + money(totals.totalPrice)}
             </button>
-          </div>
+            <p className="summary-note">
+              Availability and final prices are checked when your order is
+              placed.
+            </p>
+          </OrderSummary>
         </form>
       </div>
     </div>
   );
 }
-
-export default CheckoutPage;

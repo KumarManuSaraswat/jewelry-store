@@ -1,142 +1,102 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
-
-function CartPage() {
-  const navigate = useNavigate();
-  const { cartItems, updateCartQuantity, removeFromCart, totals } = useCart();
-
-  const totalUnits = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-
+import { money } from "../../utils/store";
+import OrderSummary from "../../components/OrderSummary";
+import Icon from "../../components/Icon";
+export default function CartPage() {
+  const { cartItems, totals, updateCartQuantity, removeFromCart } = useCart();
   return (
     <div className="page-shell">
       <div className="container">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Shopping bag</p>
-            <h1 className="section-title">Your Cart</h1>
+            <p className="eyebrow">GOOD CHOICES, BEAUTIFUL THINGS</p>
+            <h1 className="section-title">Your shopping bag.</h1>
+            <p className="section-subtitle">
+              {totals.totalItems ? `${totals.totalItems} little ${totals.totalItems === 1 ? 'reason' : 'reasons'} to smile.` : 'There’s room for something lovely.'}
+            </p>
           </div>
+          <Link className="text-link" to="/shop">
+            Keep exploring <Icon name="arrow" size={18} />
+          </Link>
         </div>
-
-        {cartItems.length === 0 ? (
-          <div className="admin-section-card">
-            <p>Your cart is empty.</p>
+        {!cartItems.length ? (
+          <div className="empty-state">
+            <Icon name="bag" size={40} />
+            <h3>Your next favorite is waiting.</h3>
+            <p>Find a piece you love and make it yours.</p>
             <Link to="/shop" className="btn-primary">
-              Continue shopping
+              Explore the collection
             </Link>
           </div>
         ) : (
           <div className="shop-layout">
-            <div className="admin-section-card" style={{ marginTop: 0 }}>
+            <div>
+              <div className="shipping-progress">
+                <p>
+                  {totals.itemsPrice > 1999
+                    ? "A little extra joy: your shipping is on us."
+                    : `You’re ${money(2000 - totals.itemsPrice)} away from complimentary shipping.`}
+                </p>
+                <progress
+                  aria-label="Progress towards free shipping"
+                  value={Math.min(totals.itemsPrice, 2000)}
+                  max="2000"
+                />
+              </div>
               {cartItems.map((item) => (
-                <div key={item.product} className="user-role-row">
-                  <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
-                    <img
-                      src={
-                        item.image ||
-                        "https://via.placeholder.com/90x110/f1e8dc/2a241f?text=ORNIVA"
-                      }
-                      alt={item.title}
-                      style={{
-                        width: "78px",
-                        height: "96px",
-                        objectFit: "cover",
-                        borderRadius: "14px",
-                        border: "1px solid #eee",
-                      }}
-                    />
-
-                    <div>
-                      <strong>{item.title}</strong>
-                      <p style={{ margin: "6px 0 0", color: "#666" }}>₹{item.price}</p>
+                <article className="bag-item" key={item.product}>
+                  <Link to={"/product/" + item.slug}>
+                    <img src={item.image} alt={item.title} />
+                  </Link>
+                  <div>
+                    <h3>
+                      <Link to={"/product/" + item.slug}>{item.title}</Link>
+                    </h3>
+                    <p>{money(item.price)}</p>
+                    <div className="quantity-control">
+                      <button
+                        aria-label={"Decrease " + item.title + " quantity"}
+                        disabled={item.quantity <= 1}
+                        onClick={() =>
+                          updateCartQuantity(item.product, item.quantity - 1)
+                        }
+                      >
+                        −
+                      </button>
+                      <span>{item.quantity}</span>
+                      <button
+                        aria-label={"Increase " + item.title + " quantity"}
+                        disabled={item.quantity >= item.countInStock}
+                        onClick={() =>
+                          updateCartQuantity(item.product, item.quantity + 1)
+                        }
+                      >
+                        +
+                      </button>
                     </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "10px",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                    }}
-                  >
                     <button
-                      className="small-action-btn"
-                      type="button"
-                      onClick={() =>
-                        updateCartQuantity(item.product, Math.max(1, item.quantity - 1))
-                      }
-                    >
-                      -
-                    </button>
-
-                    <span>{item.quantity}</span>
-
-                    <button
-                      className="small-action-btn"
-                      type="button"
-                      onClick={() =>
-                        updateCartQuantity(
-                          item.product,
-                          Math.min(item.countInStock || 99, item.quantity + 1)
-                        )
-                      }
-                    >
-                      +
-                    </button>
-
-                    <button
-                      className="small-action-btn"
-                      type="button"
+                      className="link-button"
                       onClick={() => removeFromCart(item.product)}
                     >
                       Remove
                     </button>
                   </div>
-                </div>
+                  <strong>{money(item.price * item.quantity)}</strong>
+                </article>
               ))}
             </div>
-
-            <div className="shop-sidebar">
-              <h3 className="filter-title">Order Summary</h3>
-
-              <div style={{ marginBottom: "14px", color: "#666" }}>
-                {totalUnits} item{totalUnits > 1 ? "s" : ""} in your bag
-              </div>
-
-              <div className="filter-list">
-                <div className="filter-chip">Items: ₹{totals.itemsPrice}</div>
-                <div className="filter-chip">Shipping: ₹{totals.shippingPrice}</div>
-                <div className="filter-chip">Tax: ₹{totals.taxPrice}</div>
-                <div className="filter-chip active">Total: ₹{totals.totalPrice}</div>
-              </div>
-
-              <button
-                className="btn-primary"
-                type="button"
-                style={{ marginTop: "18px", width: "100%", justifyContent: "center" }}
-                onClick={() => navigate("/checkout")}
-              >
-                Proceed to Checkout
-              </button>
-
-              <Link
-                to="/shop"
-                className="btn-secondary"
-                style={{
-                  marginTop: "12px",
-                  width: "100%",
-                  justifyContent: "center",
-                  display: "inline-flex",
-                }}
-              >
-                Continue Shopping
+            <OrderSummary totals={totals}>
+              <Link className="btn-primary" to="/checkout">
+                Continue to checkout <Icon name="arrow" size={18} />
               </Link>
-            </div>
+              <Link className="btn-secondary" to="/shop">
+                Keep shopping
+              </Link>
+            </OrderSummary>
           </div>
         )}
       </div>
     </div>
   );
 }
-
-export default CartPage;

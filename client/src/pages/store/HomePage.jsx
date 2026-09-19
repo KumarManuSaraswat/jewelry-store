@@ -1,400 +1,244 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import api from "../../api/axios";
+import useProducts from "../../hooks/useProducts";
 import ProductCard from "../../components/product/ProductCard";
-import QuickViewModal from "../../components/product/QuickViewModal";
-
-const categories = [
-  {
-    label: "Earrings",
-    value: "earrings",
-    image:
-      "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    label: "Bracelets",
-    value: "bracelets",
-    image:
-      "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    label: "Necklaces",
-    value: "necklaces",
-    image:
-      "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    label: "Rings",
-    value: "rings",
-    image:
-      "https://images.unsplash.com/photo-1603561596112-db7f8f72b2e4?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    label: "Anklets",
-    value: "anklets",
-    image:
-      "https://images.unsplash.com/photo-1611107683227-e9060eccd846?auto=format&fit=crop&w=900&q=80",
-  },
+import CollectionState from "../../components/product/CollectionState";
+import Icon from "../../components/Icon";
+const categoryImages = [
+  [
+    "Earrings",
+    "earrings",
+    "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?auto=format&fit=crop&w=600&q=85",
+  ],
+  [
+    "Necklaces",
+    "necklaces",
+    "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=600&q=85",
+  ],
+  [
+    "Rings",
+    "rings",
+    "https://images.unsplash.com/photo-1603561596112-db7f8f72b2e4?auto=format&fit=crop&w=600&q=85",
+  ],
+  [
+    "Bracelets",
+    "bracelets",
+    "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?auto=format&fit=crop&w=600&q=85",
+  ],
+  [
+    "Anklets",
+    "anklets",
+    "https://images.unsplash.com/photo-1611107683227-e9060eccd846?auto=format&fit=crop&w=600&q=85",
+  ],
 ];
-
-const testimonials = [
-  {
-    quote:
-      "I haven't taken off my Luna Pearl Drops in three months. They still look flawless.",
-    name: "Sophia R.",
-    role: "Verified Buyer",
-    initial: "S",
-  },
-  {
-    quote:
-      "The packaging alone feels premium. ORNIVA genuinely looks like a brand triple the price.",
-    name: "Amaya K.",
-    role: "Verified Buyer",
-    initial: "A",
-  },
-  {
-    quote:
-      "Finally, gold-toned jewelry that feels elegant and actually lasts through daily wear.",
-    name: "Léa M.",
-    role: "Verified Buyer",
-    initial: "L",
-  },
-];
-
-const whyItems = [
-  {
-    icon: "✦",
-    title: "Premium Quality",
-    text: "Hand-finished pieces using elevated materials and polished finishing details.",
-  },
-  {
-    icon: "₹",
-    title: "Affordable Luxury",
-    text: "Elegant design language without the markup of traditional luxury retail.",
-  },
-  {
-    icon: "✓",
-    title: "Secure Payments",
-    text: "A trustworthy checkout flow with familiar payment methods customers already use.",
-  },
-  {
-    icon: "➜",
-    title: "Fast Shipping",
-    text: "Quick dispatch and gift-worthy packaging designed to feel special on arrival.",
-  },
-  {
-    icon: "↺",
-    title: "Easy Returns",
-    text: "A simple returns promise that makes first-time orders feel safer and easier.",
-  },
-  {
-    icon: "♡",
-    title: "Concierge Support",
-    text: "Helpful human support for sizing, gifting, shipping, and product questions.",
-  },
-];
-
-const instaItems = [
-  {
-    title: "Luna Pearl Drops",
-    image:
-      "https://images.unsplash.com/photo-1611652022419-a9419f74343d?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    title: "Étoile Diamond Bracelet",
-    image:
-      "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    title: "Amoré Heart Pendant",
-    image:
-      "https://images.unsplash.com/photo-1617038260846-9c7f5f7dc0d5?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    title: "Aria Solitaire Ring",
-    image:
-      "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    title: "Halo Hoops",
-    image:
-      "https://images.unsplash.com/photo-1635767798638-3e25273a8236?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    title: "Soleil Chain Anklet",
-    image:
-      "https://images.unsplash.com/photo-1617038260732-48e5eac52328?auto=format&fit=crop&w=900&q=80",
-  },
-];
-
-function HomePage() {
-  const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [newArrivals, setNewArrivals] = useState([]);
-  const [bestSellers, setBestSellers] = useState([]);
-  const [quickViewProduct, setQuickViewProduct] = useState(null);
-
-  useEffect(() => {
-    const fetchHomeData = async () => {
-      try {
-        const [featuredRes, newRes, bestRes] = await Promise.all([
-          api.get("/api/products?isFeatured=true&limit=4"),
-          api.get("/api/products?isNewArrival=true&limit=4"),
-          api.get("/api/products?isBestSeller=true&limit=4"),
-        ]);
-
-        setFeaturedProducts(featuredRes.data);
-        setNewArrivals(newRes.data);
-        setBestSellers(bestRes.data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    fetchHomeData();
-  }, []);
-
-  const heroProduct = featuredProducts[0];
-
-  const renderGrid = (products) => (
-    <div className="product-grid">
-      {products.map((product) => (
-        <ProductCard
-          key={product._id}
-          product={product}
-          onQuickView={setQuickViewProduct}
-        />
-      ))}
-    </div>
+export default function HomePage() {
+  const { products, loading, error, retry } = useProducts();
+  const [collection, setCollection] = useState("bestsellers");
+  const curated = products.filter((p) =>
+    collection === "bestsellers" ? p.isBestSeller : p.isNewArrival,
   );
-
+  const displayed = [
+    ...curated,
+    ...products.filter((p) => !curated.some((c) => c._id === p._id)),
+  ].slice(0, 4);
   return (
-    <div className="page-shell">
-      <div className="container">
-        <section className="hero">
-          <div className="hero-copy">
-            <p className="eyebrow">New season · 2026 collection</p>
-            <h1>Elegance you can wear every day.</h1>
-            <p>
-              Discover timeless jewelry crafted in 18k gold-plated detail —
-              designed to be layered, loved, and styled from everyday mornings
-              to special evenings.
-            </p>
-
-            <div className="hero-actions">
-              <Link to="/shop" className="btn-primary">
-                Shop Now
-              </Link>
-              <Link to="/shop" className="btn-secondary">
-                Explore Collection
-              </Link>
-            </div>
+    <>
+      <section className="editorial-hero">
+        <div className="hero-copy">
+          <p className="eyebrow">THE EVERYDAY JEWELRY EDIT</p>
+          <h1>
+            Small details.
+            <br />
+            <em>Unforgettable</em>
+            <br />
+            you.
+          </h1>
+          <p className="hero-description">
+            For the everyday moments that become your story.
+            <br className="desktop-only" /> Discover jewelry made to be layered,
+            loved, and lived in.
+          </p>
+          <Link to="/shop" className="btn-primary">
+            Find your everyday favorite <Icon name="arrow" size={19} />
+          </Link>
+          <div className="hero-footnote">
+            <span className="fine-line" /> TIMELESS PIECES. A LITTLE EVERYDAY
+            LUXURY.
           </div>
-
-          <div className="hero-card">
-            <img
-              className="hero-image-desktop"
-              src={
-                heroProduct?.images?.[0] ||
-                "https://via.placeholder.com/700x900/f3e9dd/2d241b?text=ORNIVA+COLLECTION"
-              }
-              alt={heroProduct?.title || "Featured jewelry"}
-            />
-
-            <div className="hero-mobile-bg" />
-
-            <div className="hero-card-content">
-              <p className="eyebrow">Featured</p>
-              <h3>{heroProduct?.title || "Luna Pearl Drops"}</h3>
-              <p>
-                {heroProduct?.description ||
-                  "A polished everyday essential with a luminous finish and soft statement feel."}
-              </p>
-              <strong>
-                ₹
-                {heroProduct
-                  ? heroProduct.discountPrice > 0
-                    ? heroProduct.discountPrice
-                    : heroProduct.price
-                  : 2499}
-              </strong>
-            </div>
+        </div>
+        <div className="hero-visual">
+          <img
+            src="/assets/mobile-hero.jpg"
+            alt="Layered gold necklaces, hoops and bracelets styled for everyday wear"
+            fetchPriority="high"
+          />
+          <div className="hero-image-caption">
+            <span>THE ART OF EVERYDAY</span>
+            <span>01 / ORNIVA</span>
           </div>
-        </section>
-
-        <section className="section">
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">Shop by category</p>
-              <h2 className="section-title">Curated essentials</h2>
-            </div>
-            <Link to="/shop" className="product-link">
-              View all
-            </Link>
-          </div>
-
-          <div className="category-tiles">
-            {categories.map((category) => (
-              <Link
-                key={category.value}
-                to={`/shop?category=${category.value}`}
-                className="category-tile"
-              >
-                <img src={category.image} alt={category.label} />
-                <div className="category-overlay">
-                  <span>{category.label}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        <section className="section">
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">Fresh from the studio</p>
-              <h2 className="section-title">New Arrivals</h2>
-            </div>
-            <Link to="/shop" className="product-link">
-              See all new
-            </Link>
-          </div>
-          {renderGrid(newArrivals)}
-        </section>
-
-        <section className="promise-section" id="promise">
-          <div className="promise-card">
-            <img
-              src={
-                featuredProducts[0]?.images?.[0] ||
-                "https://via.placeholder.com/900x700/f0e6da/2b241d?text=THE+ORNIVA+PROMISE"
-              }
-              alt="The ORNIVA Promise"
-              className="promise-image"
-            />
-
-            <div className="promise-copy">
-              <p className="eyebrow">The ORNIVA Promise</p>
-              <h2>Crafted to be worn, designed to be remembered.</h2>
-              <p>
-                Every ORNIVA piece is made to feel elevated, giftable, and easy
-                to wear every day — with a premium finish and enduring design language.
-              </p>
-
-              <div className="promise-points">
-                <span className="promise-pill">18k Gold Plated</span>
-                <span className="promise-pill">Hand Finished</span>
-                <span className="promise-pill">30-Day Returns</span>
-              </div>
-
-              <Link to="/about" className="btn-primary">
-                Our Story
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        <section className="section">
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">Why ORNIVA</p>
-              <h2 className="section-title">The little things, done beautifully.</h2>
-            </div>
-          </div>
-
-          <div className="why-grid">
-            {whyItems.map((item) => (
-              <article key={item.title} className="why-card">
-                <div className="why-icon">{item.icon}</div>
-                <h3>{item.title}</h3>
-                <p>{item.text}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="section">
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">Most loved</p>
-              <h2 className="section-title">Best Sellers</h2>
-            </div>
-            <Link to="/shop" className="product-link">
-              All best sellers
-            </Link>
-          </div>
-          {renderGrid(bestSellers)}
-        </section>
-
-        <section className="community-section">
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">Loved worldwide</p>
-              <h2 className="section-title">From our community</h2>
-            </div>
-          </div>
-
-          <div className="testimonial-grid">
-            {testimonials.map((item) => (
-              <article key={item.name} className="testimonial-card">
-                <p className="testimonial-quote">“</p>
-                <p className="testimonial-text">{item.quote}</p>
-
-                <div className="testimonial-user">
-                  <div className="testimonial-avatar">{item.initial}</div>
-                  <div className="testimonial-meta">
-                    <strong>{item.name}</strong>
-                    <span>{item.role}</span>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="insta-section">
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">@ORNIVA</p>
-              <h2 className="section-title">Styled by you</h2>
-            </div>
-            <a href="#" className="product-link">
-              Follow us
-            </a>
-          </div>
-
-          <div className="insta-grid">
-            {instaItems.map((item) => (
-              <article key={item.title} className="insta-card">
-                <img src={item.image} alt={item.title} />
-                <div className="insta-overlay">
-                  <h4>{item.title}</h4>
-                  <a href="#">Shop the look</a>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="newsletter-box">
-          <p className="eyebrow">The ORNIVA family</p>
-          <h3>Join the list. Get 10% off.</h3>
-          <p>Early access to drops, styling notes, and members-only offers.</p>
-
-          <form className="newsletter-form">
-            <input type="email" placeholder="Enter your email" />
-            <button type="button" className="btn-primary">
-              Subscribe
-            </button>
-          </form>
-        </section>
+        </div>
+        <div className="hero-side-note">DESIGNED TO BE PART OF YOU</div>
+      </section>
+      <div className="benefits-bar">
+        <div>
+          <Icon name="spark" />
+          <span>18k gold-plated details</span>
+        </div>
+        <div>
+          <Icon name="truck" />
+          <span>Free shipping over ₹1,999</span>
+        </div>
+        <div>
+          <Icon name="return" />
+          <span>30-day easy returns</span>
+        </div>
+        <div>
+          <Icon name="gift" />
+          <span>A little joy, beautifully wrapped</span>
+        </div>
       </div>
-
-      <QuickViewModal
-        product={quickViewProduct}
-        onClose={() => setQuickViewProduct(null)}
-      />
-    </div>
+      <section className="section container">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">YOUR STYLE. YOUR SIGNATURE.</p>
+            <h2>
+              Find your kind of <em>gold.</em>
+            </h2>
+          </div>
+          <Link to="/shop" className="text-link">
+            Explore all jewelry <Icon name="arrow" size={18} />
+          </Link>
+        </div>
+        <div className="category-grid">
+          {categoryImages.map(([label, value, image], i) => (
+            <Link
+              key={value}
+              className="category-tile"
+              to={"/shop?category=" + value}
+            >
+              <div className="category-image">
+                <img
+                  src={
+                    products.find((p) => p.category === value)?.images?.[0] ||
+                    image
+                  }
+                  alt={label}
+                  loading="lazy"
+                />
+                <span className="category-number">0{i + 1}</span>
+              </div>
+              <span className="category-label">
+                {label}
+                <Icon name="arrow" size={20} />
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+      <section className="section collection-section">
+        <div className="container">
+          <div className="section-head">
+            <div>
+              <p className="eyebrow">THE PIECES YOU COME BACK TO</p>
+              <h2>
+                A few <em>favorites.</em>
+              </h2>
+            </div>
+            <Link to={"/shop?collection=" + collection} className="text-link">
+              Shop the edit <Icon name="arrow" size={18} />
+            </Link>
+          </div>
+          <div className="collection-tabs" aria-label="Featured collections">
+            {[
+              ["bestsellers", "Most loved"],
+              ["new", "Just arrived"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                aria-pressed={collection === value}
+                className={collection === value ? "active" : ""}
+                onClick={() => setCollection(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <CollectionState
+            loading={loading}
+            error={error}
+            retry={retry}
+            empty={!products.length}
+          />
+          {!loading && !error && (
+            <div className="product-grid">
+              {displayed.map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+      <section className="story-section container">
+        <div className="story-image">
+          <img
+            src="https://images.unsplash.com/photo-1611652022419-a9419f74343d?auto=format&fit=crop&w=1200&q=85"
+            alt="The delicate details of gold jewelry"
+            loading="lazy"
+          />
+          <span>BEAUTY IN THE LITTLE THINGS.</span>
+        </div>
+        <div className="story-copy">
+          <p className="eyebrow">THE ORNIVA PHILOSOPHY</p>
+          <h2>
+            Not just jewelry.
+            <br />
+            <em>A little piece of you.</em>
+          </h2>
+          <p>
+            The necklace you reach for every morning. The earrings that make an
+            ordinary day feel special. The gift that says everything.
+          </p>
+          <p>
+            We believe beautiful jewelry belongs in your everyday. Thoughtfully
+            curated, hand-finished, and made to feel like you.
+          </p>
+          <Link to="/about" className="text-link">
+            Get to know Orniva <Icon name="arrow" size={18} />
+          </Link>
+        </div>
+      </section>
+      <section className="testimonial-section">
+        <div className="container">
+          <p className="eyebrow">LITTLE PIECES. LOVELY STORIES.</p>
+          <h2>
+            From our <em>community.</em>
+          </h2>
+          <div className="testimonial-grid">
+            {[
+              [
+                "“I haven’t taken off my Luna Pearl Drops in three months. They still look flawless.”",
+                "Sophia R.",
+              ],
+              [
+                "“The packaging alone feels premium. ORNIVA genuinely looks like a brand triple the price.”",
+                "Amaya K.",
+              ],
+              [
+                "“Finally, gold-toned jewelry that feels elegant and actually lasts through daily wear.”",
+                "Léa M.",
+              ],
+            ].map(([quote, name]) => (
+              <blockquote key={name}>
+                <p>{quote}</p>
+                <footer>
+                  {name}
+                  <span>Orniva customer</span>
+                </footer>
+              </blockquote>
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
-
-export default HomePage;

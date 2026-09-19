@@ -1,393 +1,436 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import api from "../../api/axios";
-import { getAuthConfig } from "../../utils/auth";
-
-const initialForm = {
+import { categories, money, priceOf } from "../../utils/store";
+import Icon from "../../components/Icon";
+const blank = {
   title: "",
   slug: "",
   description: "",
   price: "",
   discountPrice: "",
-  category: "rings",
+  category: "earrings",
   images: "",
-  stock: "",
+  materials: "",
+  stock: 0,
   isFeatured: false,
   isNewArrival: false,
   isBestSeller: false,
 };
-
-function AdminProductsPage() {
+export default function AdminProductsPage() {
   const [products, setProducts] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [formData, setFormData] = useState(initialForm);
-
-  const fetchProducts = async () => {
+  const [form, setForm] = useState(blank);
+  const [editing, setEditing] = useState("");
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [search, setSearch] = useState("");
+  const [params] = useSearchParams();
+  const [stock, setStock] = useState(params.get("stock") || "all");
+  const [loading, setLoading] = useState(true);
+  const dialog = useRef(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  async function refresh() {
     try {
       const { data } = await api.get("/api/products");
       setProducts(data);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to load products.");
+    } finally {
+      setLoading(false);
     }
-  };
-
+  }
   useEffect(() => {
-    fetchProducts();
+    const controller = new AbortController();
+    api
+      .get("/api/products", { signal: controller.signal })
+      .then(({ data }) => setProducts(data))
+      .catch((err) => {
+        if (err.code !== "ERR_CANCELED") setError("Unable to load products.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, []);
-
-  const handleChange = (e) => {
+  function open(product) {
+    setError("");
+    setSaved("");
+    setEditing(product?._id || "");
+    setForm(
+      product
+        ? {
+            ...product,
+            images: product.images.join("\n"),
+            materials: product.materials?.join(", ") || "",
+          }
+        : blank,
+    );
+    setDialogOpen(true);
+    dialog.current.showModal();
+  }
+  function change(e) {
     const { name, value, type, checked } = e.target;
-
-    setFormData((prev) => ({
+    setForm((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
+      ...(name === "title" &&
+      !editing &&
+      (!prev.slug ||
+        prev.slug ===
+          prev.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, ""))
+        ? {
+            slug: value
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-|-$/g, ""),
+          }
+        : {}),
     }));
-  };
-
-  const resetForm = () => {
-    setFormData(initialForm);
-    setEditingId(null);
-  };
-
-  const handleEdit = (product) => {
-    setEditingId(product._id);
-    setFormData({
-      title: product.title || "",
-      slug: product.slug || "",
-      description: product.description || "",
-      price: product.price || "",
-      discountPrice: product.discountPrice || "",
-      category: product.category || "rings",
-      images: product.images?.[0] || "",
-      stock: product.stock || "",
-      isFeatured: product.isFeatured || false,
-      isNewArrival: product.isNewArrival || false,
-      isBestSeller: product.isBestSeller || false,
-    });
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleImageUpload = async (e) => {
+  }
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const payload = {
+      ...form,
+      price: Number(form.price),
+      discountPrice: Number(form.discountPrice) || 0,
+      stock: Number(form.stock),
+      images: form.images
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      materials: form.materials
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    };
+    try {
+      if (payload.discountPrice >= payload.price && payload.discountPrice > 0)
+        throw new Error("Sale price must be less than the regular price.");
+      if (editing) await api.put("/api/products/" + editing, payload);
+      else await api.post("/api/products", payload);
+      dialog.current.close();
+      setSaved(
+        editing
+          ? "Your piece has been updated."
+          : "Your new piece is in the collection.",
+      );
+      await refresh();
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Could not save this piece.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function upload(e) {
     const file = e.target.files[0];
     if (!file) return;
-
-    const uploadData = new FormData();
-    uploadData.append("image", file);
-
+    setBusy(true);
+    setError("");
     try {
-      setUploading(true);
-
-      const { data } = await api.post("/api/upload", uploadData, {
-        ...getAuthConfig(),
-        headers: {
-          ...getAuthConfig().headers,
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      setFormData((prev) => ({
+      const body = new FormData();
+      body.append("image", file);
+      const { data } = await api.post("/api/upload", body);
+      setForm((prev) => ({
         ...prev,
-        images: data.imageUrl,
+        images: [prev.images, data.imageUrl].filter(Boolean).join("\n"),
       }));
-    } catch (error) {
-      alert(error.response?.data?.message || "Image upload failed");
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not upload image.");
     } finally {
-      setUploading(false);
+      setBusy(false);
+      e.target.value = "";
     }
-  };
-
-  const buildPayload = () => ({
-    ...formData,
-    price: Number(formData.price),
-    discountPrice: Number(formData.discountPrice) || 0,
-    stock: Number(formData.stock),
-    images: formData.images ? [formData.images] : [],
-  });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  }
+  async function remove(product) {
+    if (
+      !window.confirm(
+        "Delete “" +
+          product.title +
+          "” from the catalog? Existing order records will be kept.",
+      )
+    )
+      return;
+    setError("");
     try {
-      if (editingId) {
-        await api.put(`/api/products/${editingId}`, buildPayload(), getAuthConfig());
-        alert("Product updated successfully");
-      } else {
-        await api.post("/api/products", buildPayload(), getAuthConfig());
-        alert("Product created successfully");
-      }
-
-      resetForm();
-      fetchProducts();
-    } catch (error) {
-      alert(error.response?.data?.message || "Product action failed");
+      await api.delete("/api/products/" + product._id);
+      setSaved("Product removed from the catalog.");
+      await refresh();
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not delete product.");
     }
-  };
-
-  const handleDelete = async (id) => {
-    const confirmDelete = window.confirm("Delete this product?");
-    if (!confirmDelete) return;
-
-    try {
-      await api.delete(`api/products/${id}`, getAuthConfig());
-      alert("Product deleted successfully");
-
-      if (editingId === id) {
-        resetForm();
-      }
-
-      fetchProducts();
-    } catch (error) {
-      alert(error.response?.data?.message || "Delete failed");
-    }
-  };
-
+  }
+  const visible = products.filter(
+    (p) =>
+      p.title.toLowerCase().includes(search.toLowerCase()) &&
+      (stock !== "low" || p.stock <= 5) &&
+      (stock !== "out" || p.stock === 0),
+  );
   return (
     <div>
-      <h1 style={{ marginBottom: "24px" }}>Manage Products</h1>
-
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          display: "grid",
-          gap: "12px",
-          maxWidth: "700px",
-          marginBottom: "40px",
-          padding: "20px",
-          border: "1px solid #e5e5e5",
-          borderRadius: "12px",
-          background: "#fff",
-        }}
-      >
-        <h2 style={{ fontSize: "20px" }}>
-          {editingId ? "Edit Product" : "Add Product"}
-        </h2>
-
-        <input
-          name="title"
-          placeholder="Title"
-          value={formData.title}
-          onChange={handleChange}
-          required
-        />
-
-        <input
-          name="slug"
-          placeholder="Slug"
-          value={formData.slug}
-          onChange={handleChange}
-          required
-        />
-
-        <textarea
-          name="description"
-          placeholder="Description"
-          value={formData.description}
-          onChange={handleChange}
-          required
-          rows="4"
-        />
-
-        <input
-          name="price"
-          type="number"
-          placeholder="Price"
-          value={formData.price}
-          onChange={handleChange}
-          required
-        />
-
-        <input
-          name="discountPrice"
-          type="number"
-          placeholder="Discount Price"
-          value={formData.discountPrice}
-          onChange={handleChange}
-        />
-
-        <select
-          name="category"
-          value={formData.category}
-          onChange={handleChange}
-        >
-          <option value="rings">Rings</option>
-          <option value="earrings">Earrings</option>
-          <option value="bracelets">Bracelets</option>
-          <option value="necklaces">Necklaces</option>
-          <option value="anklets">Anklets</option>
-        </select>
-
-        <input
-          name="stock"
-          type="number"
-          placeholder="Stock"
-          value={formData.stock}
-          onChange={handleChange}
-          required
-        />
-
-        <input
-          type="text"
-          name="images"
-          placeholder="Image URL"
-          value={formData.images}
-          onChange={handleChange}
-        />
-
-        <input type="file" accept="image/*" onChange={handleImageUpload} />
-
-        {uploading && <p>Uploading image...</p>}
-
-        {formData.images && (
-          <img
-            src={formData.images}
-            alt="Preview"
-            style={{
-              width: "120px",
-              height: "120px",
-              objectFit: "cover",
-              borderRadius: "10px",
-              border: "1px solid #ddd",
-            }}
-          />
-        )}
-
-        <label>
-          <input
-            type="checkbox"
-            name="isFeatured"
-            checked={formData.isFeatured}
-            onChange={handleChange}
-          />
-          Featured
-        </label>
-
-        <label>
-          <input
-            type="checkbox"
-            name="isNewArrival"
-            checked={formData.isNewArrival}
-            onChange={handleChange}
-          />
-          New Arrival
-        </label>
-
-        <label>
-          <input
-            type="checkbox"
-            name="isBestSeller"
-            checked={formData.isBestSeller}
-            onChange={handleChange}
-          />
-          Best Seller
-        </label>
-
-        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-          <button
-            type="submit"
-            style={{
-              padding: "12px 18px",
-              background: "#111",
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-            }}
-          >
-            {editingId ? "Update Product" : "Add Product"}
-          </button>
-
-          {editingId && (
-            <button
-              type="button"
-              onClick={resetForm}
-              style={{
-                padding: "12px 18px",
-                background: "#f4f4f4",
-                border: "1px solid #ddd",
-                borderRadius: "8px",
-                cursor: "pointer",
-              }}
-            >
-              Cancel Edit
-            </button>
-          )}
+      <div className="admin-heading">
+        <div>
+          <p className="eyebrow">THE COLLECTION</p>
+          <h1>Your pieces.</h1>
+          <p className="section-subtitle">
+            Manage the details that make every piece special.
+          </p>
         </div>
-      </form>
-
-      <div style={{ display: "grid", gap: "16px" }}>
-        {products.map((product) => (
-          <div
-            key={product._id}
-            style={{
-              border: "1px solid #ddd",
-              padding: "16px",
-              borderRadius: "12px",
-              background: "#fff",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: "20px",
-                flexWrap: "wrap",
-              }}
-            >
-              <div>
-                <h3>{product.title}</h3>
-                <p>Slug: {product.slug}</p>
-                <p>Category: {product.category}</p>
-                <p>Price: ₹{product.price}</p>
-                <p>Discount: ₹{product.discountPrice || 0}</p>
-                <p>Stock: {product.stock}</p>
-                <p>
-                  Flags:
-                  {product.isFeatured ? " Featured" : ""}
-                  {product.isNewArrival ? " NewArrival" : ""}
-                  {product.isBestSeller ? " BestSeller" : ""}
-                  {!product.isFeatured &&
-                  !product.isNewArrival &&
-                  !product.isBestSeller
-                    ? " None"
-                    : ""}
-                </p>
-              </div>
-
-              <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                <button
-                  onClick={() => handleEdit(product)}
-                  style={{
-                    padding: "10px 14px",
-                    border: "1px solid #111",
-                    background: "#fff",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Edit
-                </button>
-
-                <button
-                  onClick={() => handleDelete(product._id)}
-                  style={{
-                    padding: "10px 14px",
-                    border: "none",
-                    background: "#b42318",
-                    color: "#fff",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
+        <button className="btn-primary" onClick={() => open()}>
+          <Icon name="plus" size={17} /> Add product
+        </button>
       </div>
+      {error && !dialogOpen && (
+        <p className="error-message" role="alert">
+          {error}
+        </p>
+      )}
+      {saved && (
+        <p className="success-message" role="status">
+          {saved}
+        </p>
+      )}
+      <div className="admin-toolbar">
+        <input
+          aria-label="Search products"
+          placeholder="Search products…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select
+          aria-label="Filter inventory"
+          value={stock}
+          onChange={(e) => setStock(e.target.value)}
+        >
+          <option value="all">All inventory</option>
+          <option value="low">Low stock (5 or fewer)</option>
+          <option value="out">Out of stock</option>
+        </select>
+        <span className="summary-note">{visible.length} products</span>
+      </div>
+      <div className="admin-section-card table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Price</th>
+              <th>Inventory</th>
+              <th>Collections</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((p) => (
+              <tr key={p._id}>
+                <td>
+                  <div className="table-product">
+                    {p.images[0] && <img src={p.images[0]} alt="" />}
+                    <div>
+                      {p.title}
+                      <small>{p.category}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>{money(priceOf(p))}</td>
+                <td>
+                  <span
+                    className={
+                      "status-badge " + (p.stock <= 5 ? "low" : "active")
+                    }
+                  >
+                    {p.stock} available
+                  </span>
+                </td>
+                <td>
+                  {[
+                    p.isFeatured && "Featured",
+                    p.isNewArrival && "New",
+                    p.isBestSeller && "Best seller",
+                  ]
+                    .filter(Boolean)
+                    .join(", ") || "All jewelry"}
+                </td>
+                <td>
+                  <div className="table-actions">
+                    <button
+                      className="small-action-btn"
+                      onClick={() => open(p)}
+                    >
+                      Edit
+                    </button>
+                    <button className="link-button" onClick={() => remove(p)}>
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {loading ? (
+          <p role="status">Loading your collection…</p>
+        ) : (
+          !visible.length && (
+            <p className="admin-empty">No products match this view.</p>
+          )
+        )}
+      </div>
+      <dialog
+        ref={dialog}
+        className="edit-dialog"
+        onClose={() => setDialogOpen(false)}
+      >
+        <div className="section-head">
+          <h2>{editing ? "Edit your piece" : "Something new"}</h2>
+          <button
+            className="icon-button"
+            aria-label="Close product editor"
+            onClick={() => dialog.current.close()}
+          >
+            <Icon name="close" />
+          </button>
+        </div>
+        {error && (
+          <p className="error-message" role="alert">
+            {error}
+          </p>
+        )}
+        <form className="form-grid" onSubmit={submit}>
+          <label>
+            Product name
+            <input name="title" required value={form.title} onChange={change} />
+          </label>
+          <label>
+            Product URL name
+            <input name="slug" required value={form.slug} onChange={change} />
+          </label>
+          <label className="full-width">
+            Description
+            <textarea
+              name="description"
+              rows="3"
+              required
+              value={form.description}
+              onChange={change}
+            />
+          </label>
+          <label>
+            Regular price (₹)
+            <input
+              type="number"
+              min="1"
+              step="0.01"
+              name="price"
+              required
+              value={form.price}
+              onChange={change}
+            />
+          </label>
+          <label>
+            Sale price (₹, optional)
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              name="discountPrice"
+              value={form.discountPrice}
+              onChange={change}
+            />
+          </label>
+          <label>
+            Category
+            <select name="category" value={form.category} onChange={change}>
+              {categories.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Available stock
+            <input
+              type="number"
+              min="0"
+              step="1"
+              name="stock"
+              required
+              value={form.stock}
+              onChange={change}
+            />
+          </label>
+          <label className="full-width">
+            Materials (separate with commas)
+            <input
+              name="materials"
+              placeholder="18k gold plating, stainless steel"
+              value={form.materials}
+              onChange={change}
+            />
+          </label>
+          <label className="full-width">
+            Image URLs (one per line)
+            <textarea
+              name="images"
+              rows="3"
+              value={form.images}
+              onChange={change}
+            />
+          </label>
+          <label className="full-width">
+            Upload an image
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={busy}
+              onChange={upload}
+            />
+          </label>
+          <div className="preview-images full-width">
+            {form.images
+              .split("\n")
+              .filter(Boolean)
+              .slice(0, 5)
+              .map((url, i) => (
+                <img key={i} src={url} alt={"Preview " + (i + 1)} />
+              ))}
+          </div>
+          <div
+            className="full-width"
+            style={{ display: "flex", gap: 20, flexWrap: "wrap" }}
+          >
+            {[
+              ["isFeatured", "Featured"],
+              ["isNewArrival", "New arrival"],
+              ["isBestSeller", "Best seller"],
+            ].map(([name, label]) => (
+              <label key={name}>
+                <input
+                  type="checkbox"
+                  name={name}
+                  checked={form[name]}
+                  onChange={change}
+                />{" "}
+                {label}
+              </label>
+            ))}
+          </div>
+          <button className="btn-primary full-width" disabled={busy}>
+            {busy
+              ? "Saving…"
+              : editing
+                ? "Save changes"
+                : "Add to the collection"}
+          </button>
+        </form>
+      </dialog>
     </div>
   );
 }
-
-export default AdminProductsPage;

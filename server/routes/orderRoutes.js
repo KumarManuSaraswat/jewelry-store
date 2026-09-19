@@ -21,7 +21,7 @@ router.get("/:id", protect, getOrderById);
 router.post("/:id/create-razorpay-order", protect, createRazorpayOrder);
 router.post("/:id/verify-razorpay-payment", protect, verifyRazorpayPayment);
 
-router.put("/:id/pay", protect, markOrderAsPaid);
+router.put("/:id/pay", protect, adminOnly, markOrderAsPaid);
 
 router.get("/", protect, adminOnly, getAllOrdersAdmin);
 router.put("/:id/status", protect, adminOnly, updateOrderStatusAdmin);

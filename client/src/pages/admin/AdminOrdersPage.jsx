@@ -1,173 +1,150 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/axios";
-import { getAuthConfig } from "../../utils/auth";
-
-function AdminOrdersPage() {
+import { money } from "../../utils/store";
+import { exportCsv } from "../../utils/export";
+export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
-  const [updatingId, setUpdatingId] = useState("");
-
-  const fetchOrders = async () => {
-    try {
-      const { data } = await api.get("/api/orders", getAuthConfig());
-      setOrders(data);
-    } catch (error) {
-      console.error(error);
-      alert(error.response?.data?.message || "Failed to load orders");
-    }
-  };
-
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
-    fetchOrders();
+    const controller = new AbortController();
+    api
+      .get("/api/orders", { signal: controller.signal })
+      .then(({ data }) => setOrders(data))
+      .catch((err) => {
+        if (err.code !== "ERR_CANCELED")
+          setError(err.response?.data?.message || "Unable to load orders.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, []);
-
-  const updateStatus = async (orderId, updates) => {
-    try {
-      setUpdatingId(orderId);
-      await api.put(`/api/orders/${orderId}/status`, updates, getAuthConfig());
-      await fetchOrders();
-    } catch (error) {
-      console.error(error);
-      alert(error.response?.data?.message || "Failed to update order");
-    } finally {
-      setUpdatingId("");
-    }
-  };
-
-  const getPaymentLabel = (order) => {
-    if (order.paymentMethod === "razorpay") {
-      return order.isPaid ? "Paid via Razorpay" : "Pending Razorpay payment";
-    }
-
-    if (order.paymentMethod === "cod") {
-      return order.isPaid ? "COD paid" : "Cash on Delivery";
-    }
-
-    return `${order.paymentMethod} · ${order.paymentStatus}`;
-  };
-
+  const visible = orders.filter(
+    (o) =>
+      (!status || o.orderStatus === status) &&
+      [o._id, o.shippingAddress.fullName, o.user?.email]
+        .join(" ")
+        .toLowerCase()
+        .includes(search.toLowerCase()),
+  );
   return (
     <div>
-      <h1>Order Management</h1>
-      <p style={{ color: "#666", marginBottom: "20px" }}>
-        Manage payments, fulfillment, and delivery progress.
-      </p>
-
-      <div className="admin-section-card">
-        {orders.length ? (
-          orders.map((order) => (
-            <div
-              key={order._id}
-              className="user-role-row"
-              style={{
-                alignItems: "flex-start",
-                gap: "18px",
-                paddingBlock: "16px",
-                borderBottom: "1px solid #eee",
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <strong>
-                  Order #{order._id.slice(-6).toUpperCase()} ·{" "}
-                  {order.user?.name || "Unknown User"} · ₹{order.totalPrice}
-                </strong>
-
-                <p style={{ margin: "6px 0 0", color: "#666" }}>
-                  {order.user?.email || "No email"} · {order.orderItems.length} items ·{" "}
-                  {new Date(order.createdAt).toLocaleDateString()}
-                </p>
-
-                <p style={{ margin: "6px 0 0", color: "#666" }}>
-                  Payment Method: {order.paymentMethod}
-                </p>
-
-                <p style={{ margin: "6px 0 0", color: "#666" }}>
-                  Payment: {getPaymentLabel(order)} · Order: {order.orderStatus}
-                </p>
-
-                {order.shippingAddress ? (
-                  <p style={{ margin: "6px 0 0", color: "#666" }}>
-                    Ship to: {order.shippingAddress.fullName}, {order.shippingAddress.city},{" "}
-                    {order.shippingAddress.state}
-                  </p>
-                ) : null}
-
-                {order.razorpayPaymentId ? (
-                  <p style={{ margin: "6px 0 0", color: "#666", fontSize: "14px" }}>
-                    Razorpay Payment ID: {order.razorpayPaymentId}
-                  </p>
-                ) : null}
-              </div>
-
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                <button
-                  className="small-action-btn"
-                  onClick={() => updateStatus(order._id, { orderStatus: "processing" })}
-                  type="button"
-                  disabled={updatingId === order._id}
-                >
-                  Processing
-                </button>
-
-                <button
-                  className="small-action-btn"
-                  onClick={() => updateStatus(order._id, { orderStatus: "shipped" })}
-                  type="button"
-                  disabled={updatingId === order._id}
-                >
-                  Shipped
-                </button>
-
-                <button
-                  className="small-action-btn dark"
-                  onClick={() =>
-                    updateStatus(order._id, {
-                      orderStatus: "delivered",
-                      isDelivered: true,
-                    })
-                  }
-                  type="button"
-                  disabled={updatingId === order._id}
-                >
-                  Delivered
-                </button>
-
-                {!order.isPaid ? (
-                  <button
-                    className="small-action-btn"
-                    onClick={() => updateStatus(order._id, { paymentStatus: "paid" })}
-                    type="button"
-                    disabled={updatingId === order._id}
-                  >
-                    Mark Paid
-                  </button>
-                ) : null}
-
-                <button
-                  className="small-action-btn"
-                  onClick={() => updateStatus(order._id, { orderStatus: "cancelled" })}
-                  type="button"
-                  disabled={updatingId === order._id}
-                >
-                  Cancel
-                </button>
-
-                <Link
-                  to={`/admin/orders/${order._id}`}
-                  className="small-action-btn dark"
-                  style={{ textDecoration: "none" }}
-                >
-                  View Details
-                </Link>
-              </div>
-            </div>
-          ))
+      <div className="admin-heading">
+        <div>
+          <p className="eyebrow">EVERY ORDER, A LITTLE JOY</p>
+          <h1>Your orders.</h1>
+          <p className="section-subtitle">
+            Keep every customer’s delivery moving.
+          </p>
+        </div>
+        <button
+          className="btn-secondary"
+          disabled={!visible.length}
+          onClick={() =>
+            exportCsv(
+              "orniva-orders.csv",
+              [
+                "Order",
+                "Date",
+                "Customer",
+                "Amount (INR)",
+                "Payment",
+                "Status",
+              ],
+              visible.map((o) => [
+                o._id,
+                new Date(o.createdAt).toISOString(),
+                o.shippingAddress.fullName,
+                o.totalPrice,
+                o.paymentStatus,
+                o.orderStatus,
+              ]),
+            )
+          }
+        >
+          Export orders
+        </button>
+      </div>
+      {error && (
+        <p className="error-message" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="admin-toolbar">
+        <input
+          aria-label="Search orders"
+          placeholder="Order number, customer, or email…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select
+          aria-label="Filter order status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        >
+          <option value="">All orders</option>
+          {["pending", "processing", "shipped", "delivered", "cancelled"].map(
+            (s) => (
+              <option key={s}>{s}</option>
+            ),
+          )}
+        </select>
+        <span className="summary-note">{visible.length} orders</span>
+      </div>
+      <div className="admin-section-card table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Customer</th>
+              <th>Placed</th>
+              <th>Total</th>
+              <th>Payment</th>
+              <th>Status</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((o) => (
+              <tr key={o._id}>
+                <td>#{o._id.slice(-6).toUpperCase()}</td>
+                <td>
+                  {o.shippingAddress.fullName}
+                  <p className="summary-note">{o.shippingAddress.city}</p>
+                </td>
+                <td>{new Date(o.createdAt).toLocaleDateString("en-IN")}</td>
+                <td>{money(o.totalPrice)}</td>
+                <td>
+                  <span className={"status-badge " + o.paymentStatus}>
+                    {o.paymentStatus}
+                  </span>
+                </td>
+                <td>
+                  <span className={"status-badge " + o.orderStatus}>
+                    {o.orderStatus}
+                  </span>
+                </td>
+                <td>
+                  <Link className="text-link" to={"/admin/orders/" + o._id}>
+                    Manage →
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {loading ? (
+          <p role="status">Loading orders…</p>
         ) : (
-          <p>No orders found.</p>
+          !visible.length && (
+            <p className="admin-empty">No orders match this view.</p>
+          )
         )}
       </div>
     </div>
   );
 }
-
-export default AdminOrdersPage;

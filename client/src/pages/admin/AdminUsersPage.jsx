@@ -1,135 +1,153 @@
 import { useEffect, useState } from "react";
 import api from "../../api/axios";
-import { getAuthConfig } from "../../utils/auth";
-
-function AdminUsersPage() {
+import { getUserInfo } from "../../utils/auth";
+export default function AdminUsersPage() {
   const [users, setUsers] = useState([]);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [adminForm, setAdminForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
-
-  const fetchUsers = async () => {
-    try {
-      const { data } = await api.get("/api/users", getAuthConfig());
-      setUsers(data);
-    } catch (error) {
-      console.error(error);
-      alert(error.response?.data?.message || "Failed to load users");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  const current = getUserInfo();
   useEffect(() => {
-    fetchUsers();
+    const controller = new AbortController();
+    api
+      .get("/api/users", { signal: controller.signal })
+      .then(({ data }) => setUsers(data))
+      .catch((err) => {
+        if (err.code !== "ERR_CANCELED")
+          setError(err.response?.data?.message || "Unable to load your team.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, []);
-
-  const updateRole = async (userId, role) => {
+  async function role(user, value) {
+    if (
+      !window.confirm(
+        value === "admin"
+          ? "Give " +
+              user.name +
+              " access to products, orders, customer information, and team management?"
+          : "Remove " + user.name + "’s owner access?",
+      )
+    )
+      return;
+    setError("");
     try {
-      await api.put(`/api/users/${userId}/role`, { role }, getAuthConfig());
-      fetchUsers();
-    } catch (error) {
-      console.error(error);
-      alert(error.response?.data?.message || "Failed to update role");
+      const { data } = await api.put("/api/users/" + user._id + "/role", {
+        role: value,
+      });
+      setUsers((list) =>
+        list.map((u) => (u._id === user._id ? { ...u, role: data.role } : u)),
+      );
+      setNotice("Access updated.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not update access.");
     }
-  };
-
-  const handleCreateAdmin = async (e) => {
+  }
+  async function create(e) {
     e.preventDefault();
+    setBusy(true);
+    setError("");
     try {
-      await api.post("/api/auth/admin/create", adminForm, getAuthConfig());
-      alert("Admin created successfully");
-      setAdminForm({ name: "", email: "", password: "" });
-      fetchUsers();
-    } catch (error) {
-      console.error(error);
-      alert(error.response?.data?.message || "Failed to create admin");
+      const { data } = await api.post("/api/auth/admin/create", form);
+      setUsers((list) => [data, ...list]);
+      setForm({ name: "", email: "", password: "" });
+      setNotice("Team account created.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not create team account.");
+    } finally {
+      setBusy(false);
     }
-  };
-
+  }
   return (
     <div>
-      <h1>User Roles</h1>
-      <p style={{ color: "#666", marginBottom: "20px" }}>
-        Manage admin and customer access for the dashboard.
+      <p className="eyebrow">THE PEOPLE BEHIND ORNIVA</p>
+      <h1>Team & access.</h1>
+      <p className="section-subtitle">
+        Owner accounts can manage products, orders, customers, and other team
+        members.
       </p>
-
-      <div className="admin-section-card">
-        <h2 style={{ marginTop: 0 }}>Create Admin</h2>
-        <form onSubmit={handleCreateAdmin} style={{ display: "grid", gap: "12px", marginBottom: "24px" }}>
-          <input
-            name="name"
-            placeholder="Full Name"
-            value={adminForm.name}
-            onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })}
-            required
-          />
-          <input
-            name="email"
-            type="email"
-            placeholder="Admin Email"
-            value={adminForm.email}
-            onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
-            required
-          />
-          <input
-            name="password"
-            type="password"
-            placeholder="Temporary Password"
-            value={adminForm.password}
-            onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
-            required
-          />
-          <button className="btn-primary" type="submit">
-            Create Admin
+      {error && (
+        <p className="error-message" role="alert">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p className="success-message" role="status">
+          {notice}
+        </p>
+      )}
+      <section className="admin-section-card">
+        <h2>Add a team member</h2>
+        <form onSubmit={create} className="form-grid">
+          <label>
+            Name
+            <input
+              required
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+          </label>
+          <label>
+            Email
+            <input
+              type="email"
+              required
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+          </label>
+          <label>
+            Initial password
+            <input
+              type="password"
+              minLength="8"
+              required
+              autoComplete="new-password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+          </label>
+          <button className="btn-primary" disabled={busy}>
+            {busy ? "Creating…" : "Create owner account"}
           </button>
         </form>
-
-        <h2 style={{ marginTop: 0 }}>All Users</h2>
-
+      </section>
+      <section className="admin-section-card">
+        <h2>Store accounts</h2>
         {loading ? (
-          <p>Loading users...</p>
-        ) : users.length ? (
+          <p role="status">Loading accounts…</p>
+        ) : (
           users.map((user) => (
-            <div key={user._id} className="user-role-row">
+            <div className="user-role-row" key={user._id}>
               <div>
-                <strong>{user.name}</strong>
-                <p style={{ margin: "6px 0 0", color: "#666" }}>{user.email}</p>
-                <p style={{ margin: "6px 0 0", color: "#666" }}>
-                  Current role: {user.role}
+                <strong>
+                  {user.name}
+                  {user._id === current?._id ? " (you)" : ""}
+                </strong>
+                <p className="summary-note">
+                  {user.email} · {user.role}
                 </p>
               </div>
-
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              {user._id !== current?._id && (
                 <button
                   className="small-action-btn"
-                  type="button"
-                  onClick={() => updateRole(user._id, "customer")}
-                  disabled={user.role === "customer"}
+                  onClick={() =>
+                    role(user, user.role === "admin" ? "customer" : "admin")
+                  }
                 >
-                  Make Customer
+                  {user.role === "admin"
+                    ? "Remove owner access"
+                    : "Grant owner access"}
                 </button>
-
-                <button
-                  className="small-action-btn dark"
-                  type="button"
-                  onClick={() => updateRole(user._id, "admin")}
-                  disabled={user.role === "admin"}
-                >
-                  Make Admin
-                </button>
-              </div>
+              )}
             </div>
           ))
-        ) : (
-          <p>No users found.</p>
         )}
-      </div>
+      </section>
     </div>
   );
 }
-
-export default AdminUsersPage;
